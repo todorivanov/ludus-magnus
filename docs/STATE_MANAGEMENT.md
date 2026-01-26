@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legends of the Arena uses a centralized state management system inspired by Redux. All game state lives in a single `gameStore`, and state mutations happen through dispatched actions.
+Ludus Magnus: Reborn uses a centralized state management system inspired by Redux. All game state lives in a single `gameStore`, and state mutations happen through dispatched actions.
 
 ## Architecture Diagram
 

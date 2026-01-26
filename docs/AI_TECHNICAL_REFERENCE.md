@@ -1,4 +1,4 @@
-# Legends of the Arena - Technical Implementation Reference
+# Ludus Magnus: Reborn - Technical Implementation Reference
 
 > **Purpose**: Detailed technical reference for AI models to understand code patterns, data flows, and implementation specifics for development planning.
 >

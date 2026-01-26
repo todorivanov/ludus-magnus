@@ -1,6 +1,6 @@
-# Contributing to Legends of the Arena 🎮
+# Contributing to Ludus Magnus: Reborn 🎮
 
-First off, thank you for considering contributing to Legends of the Arena! It's people like you that make this game even better. 🙌
+First off, thank you for considering contributing to Ludus Magnus: Reborn! It's people like you that make this game even better. 🙌
 
 ## 📋 Table of Contents
 
@@ -372,4 +372,4 @@ Contributors will be:
 - Credited in release notes
 - Given public thanks for their work
 
-Thank you for contributing to Legends of the Arena! 🎮⚔️
+Thank you for contributing to Ludus Magnus: Reborn! 🎮⚔️

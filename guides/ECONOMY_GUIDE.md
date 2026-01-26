@@ -2,7 +2,7 @@
 
 ## 🎮 **What is the Economy System?**
 
-Legends of the Arena features a complete **gold-based economy**! Earn gold through battles and missions, spend it at the marketplace, and manage your resources strategically to become the ultimate champion!
+Ludus Magnus: Reborn features a complete **gold-based economy**! Earn gold through battles and missions, spend it at the marketplace, and manage your resources strategically to become the ultimate champion!
 
 ---
 

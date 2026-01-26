@@ -12,7 +12,7 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 ## 🛡️ Reporting a Vulnerability
 
-We take the security of Legends of the Arena seriously. If you believe you have found a security vulnerability, please report it to us as described below.
+We take the security of Ludus Magnus: Reborn seriously. If you believe you have found a security vulnerability, please report it to us as described below.
 
 ### Please Do Not:
 - **Open a public GitHub issue** for the vulnerability
@@ -113,4 +113,4 @@ Recognized security researchers:
 
 ---
 
-Thank you for helping keep Legends of the Arena and its users safe! 🛡️
+Thank you for helping keep Ludus Magnus: Reborn and its users safe! 🛡️

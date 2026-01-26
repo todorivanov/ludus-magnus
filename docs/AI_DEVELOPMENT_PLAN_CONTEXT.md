@@ -1,6 +1,6 @@
-# Legends of the Arena - AI Development Planning Context Document
+# Ludus Magnus: Reborn - AI Development Planning Context Document
 
-> **Purpose**: This document provides comprehensive context about the "Legends of the Arena" (ObjectFighterJS) codebase for AI models to understand the project architecture, systems, and create development plans.
+> **Purpose**: This document provides comprehensive context about the "Ludus Magnus: Reborn" (ObjectFighterJS) codebase for AI models to understand the project architecture, systems, and create development plans.
 >
 > **Version**: 5.0.0 | **Last Updated**: January 2026
 
@@ -9,7 +9,7 @@
 ## 1. PROJECT OVERVIEW
 
 ### 1.1 What Is This Project?
-**Legends of the Arena** is a browser-based RPG fighting game built entirely with vanilla JavaScript and Web Components (zero frameworks). It features turn-based tactical combat, story campaigns, character progression with talent trees, equipment systems, and a marketplace economy.
+**Ludus Magnus: Reborn** is a browser-based RPG fighting game built entirely with vanilla JavaScript and Web Components (zero frameworks). It features turn-based tactical combat, story campaigns, character progression with talent trees, equipment systems, and a marketplace economy.
 
 ### 1.2 Technology Stack
 | Layer | Technology | Notes |
@@ -127,7 +127,7 @@ Client-side routing with route guards:
 ```javascript
 router.register('/profile', handlers.showProfileScreen, {
   guard: 'characterCreated',
-  title: 'Profile - Legends of the Arena'
+  title: 'Profile - Ludus Magnus: Reborn'
 });
 
 router.navigate('/combat', { opponent: selectedFighter });

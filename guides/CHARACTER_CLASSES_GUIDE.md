@@ -1,4 +1,4 @@
-# Character Classes Guide - Legends of the Arena
+# Character Classes Guide - Ludus Magnus: Reborn
 
 ## Overview
 Choose from **10 unique character classes**, each with distinct playstyles, passive abilities, and combat mechanics!

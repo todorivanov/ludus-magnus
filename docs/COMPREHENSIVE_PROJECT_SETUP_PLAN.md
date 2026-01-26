@@ -1752,7 +1752,7 @@ $breakpoints: (
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Legends of the Arena</title>
+  <title>Ludus Magnus: Reborn</title>
   <meta name="description" content="Browser-based RPG fighting game with tactical grid combat">
   
   <!-- Bootstrap CSS -->

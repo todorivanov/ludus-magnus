@@ -531,7 +531,6 @@ This marks the beginning of a new gladiator management RPG focused on building a
 - **Component Modularity** - Separation of concerns (common, layout, screens)
 
 ### Changed
-- Project renamed from "Legends of the Arena" to "Ludus Magnus: Reborn"
 - Focus shifted from tactical combat to ludus management and strategic gameplay
 - Architecture modernized with React + TypeScript (was vanilla JS + Web Components)
 
