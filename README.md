@@ -1,6 +1,3 @@
-# ludus-magnus
-Ludus Magnus: Reborn is a browser-based strategy and role-playing game built with React. Set in the Roman era, the game blends tycoon-style management with tactical turn-based combat.
-
 # Ludus Magnus: Reborn
 
 A modern, open-source gladiator management RPG for the browser. Build your ludus, train legendary fighters, and conquer the Roman arena through tactical turn-based combat, deep management, and branching story campaigns.
