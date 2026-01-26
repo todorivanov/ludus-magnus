@@ -19,20 +19,16 @@ export interface Fighter {
   
   // Equipment
   equipped?: {
-    weapon?: string;
-    armor?: string;
-    accessory?: string;
+    weapon: string | null;
+    armor: string | null;
+    accessory: string | null;
   };
   
   // Talents
-  talents?: {
-    tree1: string[];
-    tree2: string[];
-    tree3: string[];
-  };
+  talents?: Record<string, number>;
   
   // Grid position (for tactical combat)
-  position?: { x: number; y: number };
+  position?: { x: number; y: number } | null;
   
   // Status effects
   statusEffects?: StatusEffect[];

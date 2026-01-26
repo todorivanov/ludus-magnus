@@ -22,24 +22,31 @@ const TitleScreen: React.FC = () => {
 
         <div className="space-y-4">
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/game')}
             className="btn-primary w-full py-4 text-xl"
           >
-            ⚔️ View Profile
+            ⚔️ Enter Arena
           </button>
           
           <button
-            className="btn-secondary w-full py-4 text-xl"
-            disabled
+            onClick={() => navigate('/ludus')}
+            className="btn-primary w-full py-4 text-xl"
           >
-            🏛️ Manage Ludus (Coming Soon)
+            🏛️ Manage Ludus
           </button>
           
           <button
-            className="btn-secondary w-full py-4 text-xl"
-            disabled
+            onClick={() => navigate('/tournament')}
+            className="btn-primary w-full py-4 text-xl"
           >
-            🏆 Enter Tournament (Coming Soon)
+            🏆 Enter Tournament
+          </button>
+          
+          <button
+            onClick={() => navigate('/profile')}
+            className="btn-secondary w-full py-4 text-xl"
+          >
+            📊 View Profile
           </button>
           
           <button

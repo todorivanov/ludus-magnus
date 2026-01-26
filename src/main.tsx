@@ -3,14 +3,28 @@ import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { store } from './store';
+import { store, startAutoSave } from './store';
 import './styles/index.css';
 
-// Load saved game state on startup (will be implemented in store)
-// const saveData = SaveManagerV2.load();
-// if (saveData) {
-//   store.dispatch(loadGameState(saveData));
-// }
+// Start auto-save after store is loaded
+// Only starts if character is created
+const state = store.getState();
+if (state.player.characterCreated) {
+  startAutoSave();
+  console.log('✅ Game loaded from save');
+}
+
+// Save on page unload
+window.addEventListener('beforeunload', () => {
+  const currentState = store.getState();
+  if (currentState.player.characterCreated) {
+    // Import at runtime to avoid circular dependency
+    import('./utils/SaveManager').then(({ saveManager }) => {
+      saveManager.save(currentState);
+      console.log('💾 Game saved on exit');
+    });
+  }
+});
 
 // Expose store for debugging in development
 if (import.meta.env.DEV) {
@@ -28,4 +42,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </BrowserRouter>
     </Provider>
   </React.StrictMode>
+
 );

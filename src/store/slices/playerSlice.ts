@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PlayerState, StoryPath } from '@/types/state.types';
+import { CharacterOrigin, PlayerState, StoryPath } from '@/types/state.types';
 import { CharacterClass } from '@/types/game.types';
 
 const initialState: PlayerState = {
@@ -10,6 +10,7 @@ const initialState: PlayerState = {
   xp: 0,
   gold: 500,
   storyPath: null,
+  origin: null,
   pathSelected: false,
   createdAt: null,
   lastPlayedAt: null,
@@ -34,6 +35,44 @@ const playerSlice = createSlice({
       state.class = action.payload.class;
       state.createdAt = Date.now();
       state.lastPlayedAt = Date.now();
+    },
+    
+    createCharacterWithPath: (
+      state,
+      action: PayloadAction<{
+        name: string;
+        class: CharacterClass;
+        path: StoryPath;
+        origin: CharacterOrigin;
+      }>
+    ) => {
+      state.characterCreated = true;
+      state.name = action.payload.name;
+      state.class = action.payload.class;
+      state.storyPath = action.payload.path;
+      state.origin = action.payload.origin;
+      state.pathSelected = true;
+      state.createdAt = Date.now();
+      state.lastPlayedAt = Date.now();
+      
+      // Apply path-specific starting gold
+      if (action.payload.path === 'gladiator') {
+        state.gold = 0; // Gladiators start with debt
+      } else if (action.payload.path === 'lanista') {
+        if (action.payload.origin === 'the_merchant') {
+          state.gold = 10000; // Rich merchant
+        } else if (action.payload.origin === 'the_veteran') {
+          state.gold = 2000; // Retired champion
+        } else {
+          state.gold = 500; // Heir with debts
+        }
+      } else if (action.payload.path === 'explorer') {
+        if (action.payload.origin === 'the_merchant_prince') {
+          state.gold = 5000; // Wealthy trader
+        } else {
+          state.gold = 1000; // Beast hunter or wanderer
+        }
+      }
     },
     
     selectStoryPath: (state, action: PayloadAction<StoryPath>) => {
@@ -92,6 +131,7 @@ const playerSlice = createSlice({
 
 export const {
   createCharacter,
+  createCharacterWithPath,
   selectStoryPath,
   addGold,
   spendGold,

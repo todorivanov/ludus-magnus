@@ -11,6 +11,7 @@ export interface PlayerState {
   
   // Story progression
   storyPath: StoryPath | null;
+  origin: CharacterOrigin | null;
   pathSelected: boolean;
   
   // Timestamps
@@ -26,12 +27,13 @@ export interface PlayerState {
   talentPoints: number;
 }
 
-export type StoryPath =
-  | 'slave_gladiator'
-  | 'roman_legionnaire'
-  | 'lanista'
-  | 'barbarian_traveller'
-  | 'desert_nomad';
+export type StoryPath = 'gladiator' | 'lanista' | 'explorer';
+
+export type GladiatorOrigin = 'thracian_veteran' | 'disgraced_noble' | 'barbarian_prisoner';
+export type LanistaOrigin = 'the_heir' | 'the_merchant' | 'the_veteran';
+export type ExplorerOrigin = 'the_venator' | 'the_merchant_prince' | 'the_wandering_lanista';
+
+export type CharacterOrigin = GladiatorOrigin | LanistaOrigin | ExplorerOrigin;
 
 // Inventory state
 export interface InventoryState {
