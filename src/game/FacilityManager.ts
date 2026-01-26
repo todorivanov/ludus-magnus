@@ -27,6 +27,9 @@ export class FacilityManager {
     };
     
     const base = baseCosts[type];
+    if (typeof base !== 'number' || isNaN(base)) {
+      throw new Error(`Unknown facility type: ${type}`);
+    }
     return Math.floor(base * Math.pow(1.5, level - 1));
   }
   
@@ -133,24 +136,37 @@ export class FacilityManager {
   
   /**
    * Get facility bonus at level
+   * Returns number (percent) for stat bonuses, string for special effects
    */
-  getFacilityBonus(type: FacilityType, level: number): string {
-    const bonuses: Record<FacilityType, (level: number) => string> = {
-      barracks: (lvl) => `+${lvl * 2} max gladiators`,
-      training_ground: (lvl) => `+${lvl * 10}% training effectiveness`,
-      medical_wing: (lvl) => `-${lvl * 20}% healing time`,
-      armory: (lvl) => `+${lvl * 5}% equipment stats`,
-      library: (lvl) => `Unlocks ${lvl} skill tiers`,
-      arena: (lvl) => `${lvl} practice matches per day`,
-      market: (lvl) => `${lvl * 5}% better prices`,
-      temple: (lvl) => `+${lvl * 5} morale/day`,
-      treasury: (lvl) => `+${lvl * 10}% tournament income`,
-      stable: (lvl) => `+${lvl * 5}% speed bonus`,
-      forge: (lvl) => `Craft tier ${lvl} equipment`,
-      tavern: (lvl) => `+${lvl * 10}% recruit quality`,
-    };
-    
-    return bonuses[type](level);
+  getFacilityBonus(type: FacilityType, level: number): number | string {
+    switch (type) {
+      case 'armory':
+        return level * 5; // % equipment stats
+      case 'training_ground':
+        return level * 10; // % training effectiveness
+      case 'market':
+        return level * 5; // % better prices
+      case 'temple':
+        return level * 5; // morale/day
+      case 'treasury':
+        return level * 10; // % tournament income
+      case 'stable':
+        return level * 5; // % speed bonus
+      case 'tavern':
+        return level * 10; // % recruit quality
+      case 'medical_wing':
+        return `-${level * 20}% healing time`;
+      case 'barracks':
+        return `+${level * 2} max gladiators`;
+      case 'library':
+        return `Unlocks ${level} skill tiers`;
+      case 'arena':
+        return `${level} practice matches per day`;
+      case 'forge':
+        return `Craft tier ${level} equipment`;
+      default:
+        return 'No bonus available';
+    }
   }
   
   /**

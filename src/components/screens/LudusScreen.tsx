@@ -51,14 +51,14 @@ const LudusScreen: React.FC = () => {
     const sampleFacilities: LudusFacility[] = [
       {
           id: 'facility_1',
-          type: 'BARRACKS' as FacilityType,
+          type: 'barracks',
           level: 2,
           upgrading: false,
           maintenanceCost: 0
       },
       {
           id: 'facility_2',
-          type: 'TRAINING_GROUND' as FacilityType,
+          type: 'training_ground',
           level: 1,
           upgrading: false,
           maintenanceCost: 0

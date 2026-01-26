@@ -127,7 +127,9 @@ export const FacilityManagement: React.FC<FacilityManagementProps> = ({
                         </div>
                         <div>
                           <p className="text-gray-600">Bonus</p>
-                          <p className="font-semibold text-green-700">+{bonus}%</p>
+                          <p className="font-semibold text-green-700">
+                            {typeof bonus === 'number' ? `+${bonus}%` : bonus}
+                          </p>
                         </div>
                       </div>
 
@@ -198,7 +200,9 @@ export const FacilityManagement: React.FC<FacilityManagementProps> = ({
                         </div>
                         <div>
                           <p className="text-gray-600">Starting Bonus</p>
-                          <p className="font-semibold text-green-700">+{bonus}%</p>
+                          <p className="font-semibold text-green-700">
+                            {typeof bonus === 'number' ? `+${bonus}%` : bonus}
+                          </p>
                         </div>
                       </div>
 

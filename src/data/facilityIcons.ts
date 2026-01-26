@@ -7,16 +7,16 @@
 import type { FacilityType } from '@/types/facility.types';
 
 export const FACILITY_ICONS: Record<FacilityType, string> = {
-  BARRACKS: '🏚️',
-  TRAINING_GROUND: '⚔️',
-  ARMORY: '🛡️',
-  INFIRMARY: '🏥',
-  TAVERN: '🍺',
-  SHRINE: '⛪',
-  LIBRARY: '📚',
-  FORGE: '🔨',
-  STABLE: '🐴',
-  MARKET: '🏪',
-  ARENA: '🏛️',
-  TREASURY: '💰',
+  barracks: '🏚️',
+  training_ground: '⚔️',
+  armory: '🛡️',
+  tavern: '🍺',
+  library: '📚',
+  forge: '🔨',
+  stable: '🐴',
+  market: '🏪',
+  arena: '🏛️',
+  medical_wing: '🏥',
+  temple: '⛪',
+  treasury: '💰',
 };
