@@ -102,7 +102,8 @@ export class TournamentManager {
   registerGladiator(
     tournamentId: string,
     gladiatorId: string,
-    gladiatorLevel: number
+    gladiatorLevel: number,
+    currentGold?: number
   ): { success: boolean; message: string } {
     const tournament = this.tournaments.get(tournamentId);
     
@@ -125,16 +126,17 @@ export class TournamentManager {
     if (tournament.registeredGladiators.includes(gladiatorId)) {
       return { success: false, message: 'Already registered' };
     }
-    
+    // Check gold requirement
+    if (typeof currentGold === 'number' && currentGold < tournament.entryFee) {
+      return { success: false, message: 'Not enough gold to register' };
+    }
     // Check capacity
     if (tournament.registeredGladiators.length >= tournament.maxParticipants) {
       return { success: false, message: 'Tournament full' };
     }
-    
     // Register
     tournament.registeredGladiators.push(gladiatorId);
     tournament.status = 'registration_open';
-    
     return { success: true, message: 'Registered successfully' };
   }
   

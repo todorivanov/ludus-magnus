@@ -116,7 +116,7 @@ export const FighterCard: React.FC<FighterCardProps> = ({
                 key={index}
                 className="rounded bg-purple-200 px-2 py-1 text-xs font-medium text-purple-800"
               >
-                {String(effect)}
+                {effect.name}
               </span>
             ))}
           </div>

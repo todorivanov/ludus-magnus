@@ -56,7 +56,8 @@ export const shuffle = <T>(array: T[]): T[] => {
 /**
  * Format number with commas
  */
-export const formatNumber = (num: number): string => {
+export const formatNumber = (num?: number): string => {
+  if (typeof num !== 'number' || isNaN(num)) return '0';
   return num.toLocaleString('en-US');
 };
 

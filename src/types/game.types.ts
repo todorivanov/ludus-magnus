@@ -34,8 +34,7 @@ export interface Fighter {
   statusEffects?: StatusEffect[];
 }
 
-export type CharacterClass =
-  | 'WARRIOR'
+export type CharacterClass = 'WARRIOR'
   | 'TANK'
   | 'BALANCED'
   | 'GLASS_CANNON'
