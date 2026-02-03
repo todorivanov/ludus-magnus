@@ -8,6 +8,7 @@ import {
   GladiatorsScreen,
   LudusScreen,
   TrainingScreen,
+  StaffScreen,
 } from '@components/screens';
 import { MainLayout } from '@components/layout';
 
@@ -25,8 +26,7 @@ const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
   );
 };
 
-// LudusScreen is now imported from screens
-const StaffScreen = () => <PlaceholderScreen name="Staff & Personnel" />;
+// Remaining placeholder screens
 const ArenaScreen = () => <PlaceholderScreen name="Arena" />;
 const CombatScreen = () => <PlaceholderScreen name="Combat" />;
 const QuestsScreen = () => <PlaceholderScreen name="Quests" />;

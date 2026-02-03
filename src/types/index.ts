@@ -152,12 +152,12 @@ export interface Building {
 
 export type StaffRole = 
   | 'doctore'    // Chief trainer
-  | 'medicus'    // Healer
-  | 'faber'      // Blacksmith
-  | 'architect'  // Builder
-  | 'educator'   // Mental conditioner
-  | 'bard'       // Publicist
-  | 'spy';       // Operative
+  | 'medicus'    // Healer/Physician
+  | 'lanista'    // Manager/Negotiator
+  | 'faber'      // Blacksmith/Craftsman
+  | 'coquus'     // Cook
+  | 'guard'      // Security
+  | 'lorarius';  // Disciplinarian
 
 export interface StaffSkill {
   id: string;
@@ -171,11 +171,11 @@ export interface Staff {
   role: StaffRole;
   level: number;          // 1-5
   experience: number;
-  hireCost: number;       // One-time payment
   dailyWage: number;      // Ongoing salary
   satisfaction: number;   // 0-100
-  skills: StaffSkill[];
+  skills: string[];       // Array of learned skill IDs
   daysUnpaid: number;
+  daysEmployed: number;
 }
 
 // ==========================================

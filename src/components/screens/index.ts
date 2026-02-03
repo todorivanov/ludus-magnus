@@ -5,3 +5,4 @@ export { MarketplaceScreen } from './MarketplaceScreen';
 export { GladiatorsScreen } from './GladiatorsScreen';
 export { LudusScreen } from './LudusScreen';
 export { TrainingScreen } from './TrainingScreen';
+export { StaffScreen } from './StaffScreen';

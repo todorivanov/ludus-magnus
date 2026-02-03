@@ -1,15 +1,25 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Staff, StaffRole } from '@/types';
 
+interface StaffMarketEntry {
+  name: string;
+  role: StaffRole;
+  hireCost: number;
+  dailyWage: number;
+  quality: 'poor' | 'average' | 'good' | 'excellent';
+}
+
 interface StaffState {
   employees: Staff[];
   availableHires: Staff[];
+  staffMarket: StaffMarketEntry[];
   totalDailyWages: number;
 }
 
 const initialState: StaffState = {
   employees: [],
   availableHires: [],
+  staffMarket: [],
   totalDailyWages: 0,
 };
 
@@ -92,15 +102,31 @@ const staffSlice = createSlice({
       }
     },
     
-    // Skills
+    // Skills (legacy - kept for compatibility)
     unlockSkill: (state, action: PayloadAction<{ staffId: string; skillId: string }>) => {
       const staff = state.employees.find(s => s.id === action.payload.staffId);
-      if (staff) {
-        const skill = staff.skills.find(sk => sk.id === action.payload.skillId);
-        if (skill) {
-          skill.unlocked = true;
-        }
+      if (staff && !staff.skills.includes(action.payload.skillId)) {
+        staff.skills.push(action.payload.skillId);
       }
+    },
+    
+    // Learn skill (simplified - adds skill ID to skills array)
+    learnStaffSkill: (state, action: PayloadAction<{ staffId: string; skillId: string }>) => {
+      const staff = state.employees.find(s => s.id === action.payload.staffId);
+      if (staff && !staff.skills.includes(action.payload.skillId)) {
+        staff.skills.push(action.payload.skillId);
+      }
+    },
+    
+    // Staff market
+    setStaffMarket: (state, action: PayloadAction<StaffMarketEntry[]>) => {
+      state.staffMarket = action.payload;
+    },
+    addToStaffMarket: (state, action: PayloadAction<StaffMarketEntry>) => {
+      state.staffMarket.push(action.payload);
+    },
+    removeFromStaffMarket: (state, action: PayloadAction<number>) => {
+      state.staffMarket.splice(action.payload, 1);
     },
     
     // Recalculate wages
@@ -127,6 +153,10 @@ export const {
   addExperience,
   levelUp,
   unlockSkill,
+  learnStaffSkill,
+  setStaffMarket,
+  addToStaffMarket,
+  removeFromStaffMarket,
   recalculateWages,
   resetStaff,
 } = staffSlice.actions;
