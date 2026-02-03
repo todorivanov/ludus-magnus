@@ -13,6 +13,7 @@ import {
   CombatScreen,
   FameScreen,
   PoliticsScreen,
+  QuestsScreen,
 } from '@components/screens';
 import { MainLayout } from '@components/layout';
 
@@ -31,7 +32,6 @@ const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
 };
 
 // Remaining placeholder screens
-const QuestsScreen = () => <PlaceholderScreen name="Quests" />;
 const SettingsScreen = () => <PlaceholderScreen name="Settings" />;
 
 const App: React.FC = () => {

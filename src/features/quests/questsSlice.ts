@@ -1,104 +1,217 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { Quest } from '@/types';
+
+interface QuestObjectiveState {
+  id: string;
+  current: number;
+  completed: boolean;
+}
+
+interface ActiveQuest {
+  questId: string;
+  startDay: number;
+  objectives: QuestObjectiveState[];
+  dialogueIndex: number;
+  selectedChoices: Record<string, string>;
+}
+
+interface CompletedQuest {
+  questId: string;
+  completedDay: number;
+  failed: boolean;
+  selectedChoices: Record<string, string>;
+}
 
 interface QuestsState {
-  availableQuests: Quest[];
-  activeQuests: Quest[];
-  completedQuests: Quest[];
-  storyProgress: number;  // 0-100 story completion percentage
+  // Active quest tracking
+  activeQuests: ActiveQuest[];
+  
+  // Completed quest IDs for unlock checks
+  completedQuestIds: string[];
+  completedQuests: CompletedQuest[];
+  
+  // Cooldowns for repeatable quests
+  questCooldowns: Record<string, number>;
+  
+  // Story progress
+  currentChapter: number;
+  storyProgress: number; // 0-100
   isEndlessMode: boolean;
+  
+  // Current dialogue state
+  activeDialogue: {
+    questId: string;
+    dialogueId: string;
+  } | null;
 }
 
 const initialState: QuestsState = {
-  availableQuests: [],
   activeQuests: [],
+  completedQuestIds: [],
   completedQuests: [],
+  questCooldowns: {},
+  currentChapter: 1,
   storyProgress: 0,
   isEndlessMode: false,
+  activeDialogue: null,
 };
 
 const questsSlice = createSlice({
   name: 'quests',
   initialState,
   reducers: {
-    // Quest management
-    addAvailableQuest: (state, action: PayloadAction<Quest>) => {
-      state.availableQuests.push(action.payload);
-    },
-    setAvailableQuests: (state, action: PayloadAction<Quest[]>) => {
-      state.availableQuests = action.payload;
-    },
-    acceptQuest: (state, action: PayloadAction<string>) => {
-      const quest = state.availableQuests.find(q => q.id === action.payload);
-      if (quest) {
-        quest.status = 'active';
-        state.activeQuests.push(quest);
-        state.availableQuests = state.availableQuests.filter(q => q.id !== action.payload);
+    // Accept/Start a quest
+    startQuest: (state, action: PayloadAction<{
+      questId: string;
+      startDay: number;
+      objectives: { id: string; required: number }[];
+    }>) => {
+      // Don't add if already active
+      if (state.activeQuests.some(q => q.questId === action.payload.questId)) {
+        return;
       }
+      
+      state.activeQuests.push({
+        questId: action.payload.questId,
+        startDay: action.payload.startDay,
+        objectives: action.payload.objectives.map(o => ({
+          id: o.id,
+          current: 0,
+          completed: false,
+        })),
+        dialogueIndex: 0,
+        selectedChoices: {},
+      });
     },
     
-    // Quest progress
-    completeObjective: (state, action: PayloadAction<{ questId: string; objectiveId: string }>) => {
-      const quest = state.activeQuests.find(q => q.id === action.payload.questId);
-      if (quest && !quest.completedObjectives.includes(action.payload.objectiveId)) {
-        quest.completedObjectives.push(action.payload.objectiveId);
-      }
-    },
-    
-    // Quest completion
-    completeQuest: (state, action: PayloadAction<{ questId: string; choiceId?: string }>) => {
-      const quest = state.activeQuests.find(q => q.id === action.payload.questId);
+    // Update objective progress
+    updateObjective: (state, action: PayloadAction<{
+      questId: string;
+      objectiveId: string;
+      progress: number;
+      required: number;
+    }>) => {
+      const quest = state.activeQuests.find(q => q.questId === action.payload.questId);
       if (quest) {
-        quest.status = 'completed';
-        if (action.payload.choiceId) {
-          quest.selectedChoice = action.payload.choiceId;
+        const objective = quest.objectives.find(o => o.id === action.payload.objectiveId);
+        if (objective) {
+          objective.current = Math.min(action.payload.progress, action.payload.required);
+          objective.completed = objective.current >= action.payload.required;
         }
-        state.completedQuests.push(quest);
-        state.activeQuests = state.activeQuests.filter(q => q.id !== action.payload.questId);
       }
     },
-    failQuest: (state, action: PayloadAction<string>) => {
-      const quest = state.activeQuests.find(q => q.id === action.payload);
+    
+    // Increment objective
+    incrementObjective: (state, action: PayloadAction<{
+      questId: string;
+      objectiveId: string;
+      amount: number;
+      required: number;
+    }>) => {
+      const quest = state.activeQuests.find(q => q.questId === action.payload.questId);
       if (quest) {
-        quest.status = 'failed';
-        state.completedQuests.push(quest);
-        state.activeQuests = state.activeQuests.filter(q => q.id !== action.payload);
+        const objective = quest.objectives.find(o => o.id === action.payload.objectiveId);
+        if (objective && !objective.completed) {
+          objective.current = Math.min(objective.current + action.payload.amount, action.payload.required);
+          objective.completed = objective.current >= action.payload.required;
+        }
       }
+    },
+    
+    // Complete quest
+    completeQuest: (state, action: PayloadAction<{
+      questId: string;
+      completedDay: number;
+      cooldownDays?: number;
+    }>) => {
+      const quest = state.activeQuests.find(q => q.questId === action.payload.questId);
+      if (quest) {
+        // Move to completed
+        state.completedQuests.push({
+          questId: action.payload.questId,
+          completedDay: action.payload.completedDay,
+          failed: false,
+          selectedChoices: quest.selectedChoices,
+        });
+        
+        // Add to completed IDs
+        if (!state.completedQuestIds.includes(action.payload.questId)) {
+          state.completedQuestIds.push(action.payload.questId);
+        }
+        
+        // Set cooldown if applicable
+        if (action.payload.cooldownDays) {
+          state.questCooldowns[action.payload.questId] = action.payload.cooldownDays;
+        }
+        
+        // Remove from active
+        state.activeQuests = state.activeQuests.filter(q => q.questId !== action.payload.questId);
+      }
+    },
+    
+    // Fail quest
+    failQuest: (state, action: PayloadAction<{
+      questId: string;
+      completedDay: number;
+    }>) => {
+      const quest = state.activeQuests.find(q => q.questId === action.payload.questId);
+      if (quest) {
+        state.completedQuests.push({
+          questId: action.payload.questId,
+          completedDay: action.payload.completedDay,
+          failed: true,
+          selectedChoices: quest.selectedChoices,
+        });
+        state.activeQuests = state.activeQuests.filter(q => q.questId !== action.payload.questId);
+      }
+    },
+    
+    // Abandon quest
+    abandonQuest: (state, action: PayloadAction<string>) => {
+      state.activeQuests = state.activeQuests.filter(q => q.questId !== action.payload);
+    },
+    
+    // Record dialogue choice
+    recordChoice: (state, action: PayloadAction<{
+      questId: string;
+      dialogueId: string;
+      choiceId: string;
+    }>) => {
+      const quest = state.activeQuests.find(q => q.questId === action.payload.questId);
+      if (quest) {
+        quest.selectedChoices[action.payload.dialogueId] = action.payload.choiceId;
+      }
+    },
+    
+    // Set active dialogue
+    setActiveDialogue: (state, action: PayloadAction<{ questId: string; dialogueId: string } | null>) => {
+      state.activeDialogue = action.payload;
+    },
+    
+    // Tick cooldowns (called daily)
+    tickCooldowns: (state) => {
+      Object.keys(state.questCooldowns).forEach(questId => {
+        if (state.questCooldowns[questId] > 0) {
+          state.questCooldowns[questId]--;
+        }
+      });
     },
     
     // Story progress
-    advanceStory: (state, action: PayloadAction<number>) => {
-      state.storyProgress = Math.min(100, state.storyProgress + action.payload);
-      if (state.storyProgress >= 100) {
+    advanceChapter: (state) => {
+      state.currentChapter++;
+      state.storyProgress = Math.min(100, (state.currentChapter / 5) * 100);
+      if (state.currentChapter >= 5) {
         state.isEndlessMode = true;
       }
     },
+    
     setStoryProgress: (state, action: PayloadAction<number>) => {
       state.storyProgress = Math.max(0, Math.min(100, action.payload));
     },
     
-    // Endless mode
     enableEndlessMode: (state) => {
       state.isEndlessMode = true;
       state.storyProgress = 100;
-    },
-    
-    // Expiration check
-    expireQuests: (state, action: PayloadAction<number>) => {
-      const currentDay = action.payload;
-      state.availableQuests = state.availableQuests.filter(q => {
-        if (q.expiresOnDay && q.expiresOnDay < currentDay) {
-          return false;
-        }
-        return true;
-      });
-      state.activeQuests.forEach(quest => {
-        if (quest.expiresOnDay && quest.expiresOnDay < currentDay) {
-          quest.status = 'failed';
-          state.completedQuests.push(quest);
-        }
-      });
-      state.activeQuests = state.activeQuests.filter(q => q.status === 'active');
     },
     
     // Reset
@@ -107,24 +220,29 @@ const questsSlice = createSlice({
 });
 
 export const {
-  addAvailableQuest,
-  setAvailableQuests,
-  acceptQuest,
-  completeObjective,
+  startQuest,
+  updateObjective,
+  incrementObjective,
   completeQuest,
   failQuest,
-  advanceStory,
+  abandonQuest,
+  recordChoice,
+  setActiveDialogue,
+  tickCooldowns,
+  advanceChapter,
   setStoryProgress,
   enableEndlessMode,
-  expireQuests,
   resetQuests,
 } = questsSlice.actions;
 
 // Selectors
-export const selectAvailableQuests = (state: { quests: QuestsState }) => state.quests.availableQuests;
 export const selectActiveQuests = (state: { quests: QuestsState }) => state.quests.activeQuests;
+export const selectCompletedQuestIds = (state: { quests: QuestsState }) => state.quests.completedQuestIds;
 export const selectCompletedQuests = (state: { quests: QuestsState }) => state.quests.completedQuests;
+export const selectQuestCooldowns = (state: { quests: QuestsState }) => state.quests.questCooldowns;
+export const selectCurrentChapter = (state: { quests: QuestsState }) => state.quests.currentChapter;
 export const selectStoryProgress = (state: { quests: QuestsState }) => state.quests.storyProgress;
 export const selectIsEndlessMode = (state: { quests: QuestsState }) => state.quests.isEndlessMode;
+export const selectActiveDialogue = (state: { quests: QuestsState }) => state.quests.activeDialogue;
 
 export default questsSlice.reducer;
