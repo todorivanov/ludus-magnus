@@ -11,6 +11,8 @@ import {
   StaffScreen,
   ArenaScreen,
   CombatScreen,
+  FameScreen,
+  PoliticsScreen,
 } from '@components/screens';
 import { MainLayout } from '@components/layout';
 
@@ -58,6 +60,10 @@ const App: React.FC = () => {
         return <ArenaScreen />;
       case 'combat':
         return <CombatScreen />;
+      case 'fame':
+        return <FameScreen />;
+      case 'politics':
+        return <PoliticsScreen />;
       case 'quests':
         return <QuestsScreen />;
       case 'settings':

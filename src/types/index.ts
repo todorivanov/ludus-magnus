@@ -17,6 +17,8 @@ export type GameScreen =
   | 'arena' 
   | 'combat'
   | 'staff'
+  | 'fame'
+  | 'politics'
   | 'quests'
   | 'settings';
 

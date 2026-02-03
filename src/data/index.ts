@@ -4,3 +4,5 @@ export * from './skillTrees';
 export * from './training';
 export * from './staff';
 export * from './combat';
+export * from './fame';
+export * from './factions';

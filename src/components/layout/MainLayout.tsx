@@ -21,6 +21,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'staff', label: 'Staff', icon: '👥' },
     { id: 'marketplace', label: 'Market', icon: '🛒' },
     { id: 'arena', label: 'Arena', icon: '🏟️' },
+    { id: 'fame', label: 'Fame', icon: '⭐' },
+    { id: 'politics', label: 'Politics', icon: '🏛️' },
     { id: 'quests', label: 'Quests', icon: '📜' },
   ];
 
