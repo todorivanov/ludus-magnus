@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================================
+   LEGENDS OF THE ARENA - Roman Theme Stylesheet
+   ================================================ */
+
 /* Base styles */
 @layer base {
   html {
@@ -16,6 +20,16 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-roman;
+  }
+
+  /* Focus styles */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-roman-gold-500;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-roman-gold-600/30 text-roman-gold-100;
   }
 
   /* Custom scrollbar */
@@ -113,8 +127,17 @@
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   }
 
+  .text-shadow-gold {
+    text-shadow: 0 0 10px rgba(212, 164, 24, 0.5), 0 0 20px rgba(212, 164, 24, 0.3);
+  }
+
   .text-gradient-gold {
     @apply bg-gradient-to-r from-roman-gold-400 via-roman-gold-500 to-roman-gold-600 
+           bg-clip-text text-transparent;
+  }
+
+  .text-gradient-crimson {
+    @apply bg-gradient-to-r from-roman-crimson-400 via-roman-crimson-500 to-roman-crimson-600 
            bg-clip-text text-transparent;
   }
 
@@ -132,5 +155,166 @@
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
+  }
+
+  /* Pulse glow effect */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  .pulse-gold {
+    animation: pulseGold 2s ease-in-out infinite;
+  }
+
+  .pulse-crimson {
+    animation: pulseCrimson 2s ease-in-out infinite;
+  }
+
+  /* Floating animation */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Shake animation for warnings */
+  .shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Responsive text utilities */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply backdrop-blur-md bg-white/5;
+  }
+
+  .glass-dark {
+    @apply backdrop-blur-md bg-black/30;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 5px rgba(212, 164, 24, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(212, 164, 24, 0.8), 0 0 30px rgba(212, 164, 24, 0.4); }
+}
+
+@keyframes pulseCrimson {
+  0%, 100% { box-shadow: 0 0 5px rgba(220, 38, 38, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 30px rgba(220, 38, 38, 0.4); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive breakpoint helpers */
+@media (max-width: 640px) {
+  .mobile-stack {
+    @apply flex-col;
+  }
+  
+  .mobile-full {
+    @apply w-full;
+  }
+  
+  .mobile-hide {
+    @apply hidden;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-2col {
+    @apply grid-cols-2;
+  }
+}
+
+@media (min-width: 1025px) {
+  .desktop-show {
+    @apply block;
   }
 }

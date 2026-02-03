@@ -11,3 +11,4 @@ export { CombatScreen } from './CombatScreen';
 export { FameScreen } from './FameScreen';
 export { PoliticsScreen } from './PoliticsScreen';
 export { QuestsScreen } from './QuestsScreen';
+export { SettingsScreen } from './SettingsScreen';

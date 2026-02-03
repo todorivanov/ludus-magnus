@@ -14,25 +14,8 @@ import {
   FameScreen,
   PoliticsScreen,
   QuestsScreen,
+  SettingsScreen,
 } from '@components/screens';
-import { MainLayout } from '@components/layout';
-
-// Placeholder screens for features we'll build in later phases
-const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
-  return (
-    <MainLayout>
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <h2 className="font-roman text-2xl text-roman-gold-500 mb-4">{name}</h2>
-          <p className="text-roman-marble-400">Coming soon in the next phase...</p>
-        </div>
-      </div>
-    </MainLayout>
-  );
-};
-
-// Remaining placeholder screens
-const SettingsScreen = () => <PlaceholderScreen name="Settings" />;
 
 const App: React.FC = () => {
   const currentScreen = useAppSelector(state => state.game.currentScreen);
