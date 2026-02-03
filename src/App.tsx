@@ -1,10 +1,16 @@
 import React from 'react';
 import { useAppSelector } from '@app/hooks';
-import { TitleScreen, NewGameScreen, DashboardScreen } from '@components/screens';
+import { 
+  TitleScreen, 
+  NewGameScreen, 
+  DashboardScreen,
+  MarketplaceScreen,
+  GladiatorsScreen,
+} from '@components/screens';
+import { MainLayout } from '@components/layout';
 
 // Placeholder screens for features we'll build in later phases
 const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
-  const { MainLayout } = require('@components/layout');
   return (
     <MainLayout>
       <div className="flex items-center justify-center h-96">
@@ -18,9 +24,7 @@ const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
 };
 
 const LudusScreen = () => <PlaceholderScreen name="Ludus Management" />;
-const GladiatorsScreen = () => <PlaceholderScreen name="Gladiators" />;
 const StaffScreen = () => <PlaceholderScreen name="Staff & Personnel" />;
-const MarketplaceScreen = () => <PlaceholderScreen name="Marketplace" />;
 const ArenaScreen = () => <PlaceholderScreen name="Arena" />;
 const CombatScreen = () => <PlaceholderScreen name="Combat" />;
 const QuestsScreen = () => <PlaceholderScreen name="Quests" />;

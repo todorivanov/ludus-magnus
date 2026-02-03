@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { advanceDay } from '@features/game/gameSlice';
+import { advanceDay, setScreen } from '@features/game/gameSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar } from '@components/ui';
 import { MainLayout } from '@components/layout';
 
@@ -174,10 +174,18 @@ export const DashboardScreen: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Button variant="primary" className="w-full">
+                  <Button 
+                    variant="primary" 
+                    className="w-full"
+                    onClick={() => dispatch(setScreen('marketplace'))}
+                  >
                     Visit Marketplace
                   </Button>
-                  <Button variant="primary" className="w-full">
+                  <Button 
+                    variant="primary" 
+                    className="w-full"
+                    onClick={() => dispatch(setScreen('arena'))}
+                  >
                     View Arena Schedule
                   </Button>
                   <Button
