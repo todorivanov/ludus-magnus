@@ -3,3 +3,4 @@ export { NewGameScreen } from './NewGameScreen';
 export { DashboardScreen } from './DashboardScreen';
 export { MarketplaceScreen } from './MarketplaceScreen';
 export { GladiatorsScreen } from './GladiatorsScreen';
+export { LudusScreen } from './LudusScreen';
