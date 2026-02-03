@@ -15,10 +15,11 @@ import {
   PoliticsScreen,
   QuestsScreen,
   SettingsScreen,
+  CodexScreen,
 } from '@components/screens';
 
 const App: React.FC = () => {
-  const currentScreen = useAppSelector(state => state.game.currentScreen);
+  const currentScreen = useAppSelector(state => state.game?.currentScreen || 'title');
 
   // Render the appropriate screen based on game state
   const renderScreen = () => {
@@ -51,6 +52,8 @@ const App: React.FC = () => {
         return <QuestsScreen />;
       case 'settings':
         return <SettingsScreen />;
+      case 'codex':
+        return <CodexScreen />;
       default:
         return <TitleScreen />;
     }

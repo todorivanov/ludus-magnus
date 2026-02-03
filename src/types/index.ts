@@ -20,7 +20,8 @@ export type GameScreen =
   | 'fame'
   | 'politics'
   | 'quests'
-  | 'settings';
+  | 'settings'
+  | 'codex';
 
 // ==========================================
 // GLADIATOR TYPES

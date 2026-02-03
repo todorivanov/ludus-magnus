@@ -12,3 +12,4 @@ export { FameScreen } from './FameScreen';
 export { PoliticsScreen } from './PoliticsScreen';
 export { QuestsScreen } from './QuestsScreen';
 export { SettingsScreen } from './SettingsScreen';
+export { CodexScreen } from './CodexScreen';
