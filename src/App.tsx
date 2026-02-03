@@ -7,6 +7,7 @@ import {
   MarketplaceScreen,
   GladiatorsScreen,
   LudusScreen,
+  TrainingScreen,
 } from '@components/screens';
 import { MainLayout } from '@components/layout';
 
@@ -47,6 +48,8 @@ const App: React.FC = () => {
         return <LudusScreen />;
       case 'gladiators':
         return <GladiatorsScreen />;
+      case 'training':
+        return <TrainingScreen />;
       case 'staff':
         return <StaffScreen />;
       case 'marketplace':

@@ -11,7 +11,8 @@ export type GameScreen =
   | 'newGame' 
   | 'dashboard' 
   | 'ludus' 
-  | 'gladiators' 
+  | 'gladiators'
+  | 'training' 
   | 'marketplace' 
   | 'arena' 
   | 'combat'
@@ -104,6 +105,11 @@ export interface Gladiator {
   isTraining: boolean;
   isResting: boolean;
   isInjured: boolean;
+  status?: 'idle' | 'training' | 'resting' | 'injured' | 'fighting';
+  
+  // Training and nutrition
+  trainingRegimen?: string | null;
+  nutrition?: 'poor' | 'standard' | 'good' | 'excellent';
 }
 
 // ==========================================

@@ -142,6 +142,7 @@ const gladiatorsSlice = createSlice({
       if (gladiator) {
         gladiator.isTraining = action.payload.isTraining;
         gladiator.isResting = false;
+        gladiator.status = action.payload.isTraining ? 'training' : 'idle';
       }
     },
     setResting: (state, action: PayloadAction<{ id: string; isResting: boolean }>) => {
@@ -149,6 +150,78 @@ const gladiatorsSlice = createSlice({
       if (gladiator) {
         gladiator.isResting = action.payload.isResting;
         gladiator.isTraining = false;
+        gladiator.status = action.payload.isResting ? 'resting' : 'idle';
+      }
+    },
+    
+    // Training regimen selection
+    setTrainingRegimen: (state, action: PayloadAction<{ gladiatorId: string; trainingType: string | null }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.gladiatorId);
+      if (gladiator) {
+        gladiator.trainingRegimen = action.payload.trainingType;
+        gladiator.isTraining = action.payload.trainingType !== null;
+        gladiator.isResting = false;
+        gladiator.status = action.payload.trainingType ? 'training' : 'idle';
+      }
+    },
+    
+    // Nutrition level
+    setNutrition: (state, action: PayloadAction<{ gladiatorId: string; nutrition: string }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.gladiatorId);
+      if (gladiator) {
+        gladiator.nutrition = action.payload.nutrition as 'poor' | 'standard' | 'good' | 'excellent';
+      }
+    },
+    
+    // Update base stats
+    updateStats: (state, action: PayloadAction<{ 
+      id: string; 
+      stats: Partial<{ strength: number; agility: number; dexterity: number; endurance: number; constitution: number }>
+    }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        Object.entries(action.payload.stats).forEach(([key, value]) => {
+          if (value !== undefined && key in gladiator.stats) {
+            (gladiator.stats as any)[key] = Math.max(1, Math.min(100, value));
+          }
+        });
+      }
+    },
+    
+    // Update derived stats (morale, fatigue, obedience)
+    updateDerivedStats: (state, action: PayloadAction<{
+      id: string;
+      stats: Partial<{ morale: number; fatigue: number; obedience: number }>
+    }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        if (action.payload.stats.morale !== undefined) {
+          gladiator.morale = Math.max(0.1, Math.min(1.5, action.payload.stats.morale));
+        }
+        if (action.payload.stats.fatigue !== undefined) {
+          gladiator.fatigue = Math.max(0, Math.min(100, action.payload.stats.fatigue));
+        }
+        if (action.payload.stats.obedience !== undefined) {
+          gladiator.obedience = Math.max(0, Math.min(100, action.payload.stats.obedience));
+        }
+      }
+    },
+    
+    // Learn skill
+    learnSkill: (state, action: PayloadAction<{ gladiatorId: string; skillId: string }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.gladiatorId);
+      if (gladiator && gladiator.skillPoints > 0) {
+        const alreadyLearned = gladiator.skills.some(s => s.id === action.payload.skillId);
+        if (!alreadyLearned) {
+          gladiator.skills.push({
+            id: action.payload.skillId,
+            name: action.payload.skillId,
+            branch: 'offense', // Will be determined by skill tree
+            levelRequired: 1,
+            unlocked: true,
+          });
+          gladiator.skillPoints -= 1;
+        }
       }
     },
     
@@ -204,6 +277,11 @@ export const {
   recordLoss,
   setTraining,
   setResting,
+  setTrainingRegimen,
+  setNutrition,
+  updateStats,
+  updateDerivedStats,
+  learnSkill,
   addInjury,
   healInjury,
   updateInjuryRecovery,

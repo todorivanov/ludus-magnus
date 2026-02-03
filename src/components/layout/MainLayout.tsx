@@ -17,6 +17,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'dashboard', label: 'Dashboard', icon: '🏛️' },
     { id: 'ludus', label: 'Ludus', icon: '🏗️' },
     { id: 'gladiators', label: 'Gladiators', icon: '⚔️' },
+    { id: 'training', label: 'Training', icon: '🏋️' },
     { id: 'staff', label: 'Staff', icon: '👥' },
     { id: 'marketplace', label: 'Market', icon: '🛒' },
     { id: 'arena', label: 'Arena', icon: '🏟️' },
