@@ -1,0 +1,221 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { Gladiator } from '@/types';
+
+interface GladiatorsState {
+  roster: Gladiator[];
+  marketPool: Gladiator[];
+  selectedGladiatorId: string | null;
+}
+
+const initialState: GladiatorsState = {
+  roster: [],
+  marketPool: [],
+  selectedGladiatorId: null,
+};
+
+const gladiatorsSlice = createSlice({
+  name: 'gladiators',
+  initialState,
+  reducers: {
+    // Roster management
+    addGladiator: (state, action: PayloadAction<Gladiator>) => {
+      state.roster.push(action.payload);
+    },
+    removeGladiator: (state, action: PayloadAction<string>) => {
+      state.roster = state.roster.filter(g => g.id !== action.payload);
+    },
+    updateGladiator: (state, action: PayloadAction<{ id: string; updates: Partial<Gladiator> }>) => {
+      const index = state.roster.findIndex(g => g.id === action.payload.id);
+      if (index !== -1) {
+        state.roster[index] = { ...state.roster[index], ...action.payload.updates };
+      }
+    },
+    
+    // Selection
+    selectGladiator: (state, action: PayloadAction<string | null>) => {
+      state.selectedGladiatorId = action.payload;
+    },
+    
+    // Market
+    setMarketPool: (state, action: PayloadAction<Gladiator[]>) => {
+      state.marketPool = action.payload;
+    },
+    addToMarket: (state, action: PayloadAction<Gladiator>) => {
+      state.marketPool.push(action.payload);
+    },
+    removeFromMarket: (state, action: PayloadAction<string>) => {
+      state.marketPool = state.marketPool.filter(g => g.id !== action.payload);
+    },
+    
+    // Purchase gladiator (move from market to roster)
+    purchaseGladiator: (state, action: PayloadAction<string>) => {
+      const gladiator = state.marketPool.find(g => g.id === action.payload);
+      if (gladiator) {
+        state.roster.push(gladiator);
+        state.marketPool = state.marketPool.filter(g => g.id !== action.payload);
+      }
+    },
+    
+    // Sell gladiator (remove from roster)
+    sellGladiator: (state, action: PayloadAction<string>) => {
+      state.roster = state.roster.filter(g => g.id !== action.payload);
+    },
+    
+    // Stats and progression
+    addExperience: (state, action: PayloadAction<{ id: string; amount: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.experience += action.payload.amount;
+      }
+    },
+    levelUp: (state, action: PayloadAction<{ id: string }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator && gladiator.level < 20) {
+        gladiator.level += 1;
+        gladiator.skillPoints += 5;
+      }
+    },
+    distributeStatPoints: (state, action: PayloadAction<{ id: string; stat: keyof Gladiator['stats']; points: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator && gladiator.skillPoints >= action.payload.points) {
+        gladiator.stats[action.payload.stat] += action.payload.points;
+        gladiator.skillPoints -= action.payload.points;
+      }
+    },
+    
+    // Combat stats
+    updateHP: (state, action: PayloadAction<{ id: string; hp: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.currentHP = Math.max(0, Math.min(gladiator.maxHP, action.payload.hp));
+      }
+    },
+    updateStamina: (state, action: PayloadAction<{ id: string; stamina: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.currentStamina = Math.max(0, Math.min(gladiator.maxStamina, action.payload.stamina));
+      }
+    },
+    
+    // Morale and fatigue
+    updateMorale: (state, action: PayloadAction<{ id: string; morale: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.morale = Math.max(0.1, Math.min(1.5, action.payload.morale));
+      }
+    },
+    updateFatigue: (state, action: PayloadAction<{ id: string; fatigue: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.fatigue = Math.max(0, Math.min(100, action.payload.fatigue));
+      }
+    },
+    
+    // Fame
+    addFame: (state, action: PayloadAction<{ id: string; amount: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.fame = Math.min(1000, Math.max(0, gladiator.fame + action.payload.amount));
+      }
+    },
+    
+    // Combat record
+    recordWin: (state, action: PayloadAction<{ id: string; wasKill: boolean }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.wins += 1;
+        if (action.payload.wasKill) {
+          gladiator.kills += 1;
+        }
+      }
+    },
+    recordLoss: (state, action: PayloadAction<{ id: string }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.losses += 1;
+      }
+    },
+    
+    // Training state
+    setTraining: (state, action: PayloadAction<{ id: string; isTraining: boolean }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.isTraining = action.payload.isTraining;
+        gladiator.isResting = false;
+      }
+    },
+    setResting: (state, action: PayloadAction<{ id: string; isResting: boolean }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.isResting = action.payload.isResting;
+        gladiator.isTraining = false;
+      }
+    },
+    
+    // Injuries
+    addInjury: (state, action: PayloadAction<{ id: string; injury: Gladiator['injuries'][0] }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.id);
+      if (gladiator) {
+        gladiator.injuries.push(action.payload.injury);
+        gladiator.isInjured = true;
+      }
+    },
+    healInjury: (state, action: PayloadAction<{ gladiatorId: string; injuryId: string }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.gladiatorId);
+      if (gladiator) {
+        gladiator.injuries = gladiator.injuries.filter(i => i.id !== action.payload.injuryId);
+        gladiator.isInjured = gladiator.injuries.length > 0;
+      }
+    },
+    updateInjuryRecovery: (state, action: PayloadAction<{ gladiatorId: string; injuryId: string; daysRemaining: number }>) => {
+      const gladiator = state.roster.find(g => g.id === action.payload.gladiatorId);
+      if (gladiator) {
+        const injury = gladiator.injuries.find(i => i.id === action.payload.injuryId);
+        if (injury) {
+          injury.daysRemaining = action.payload.daysRemaining;
+        }
+      }
+    },
+    
+    // Reset
+    resetGladiators: () => initialState,
+  },
+});
+
+export const {
+  addGladiator,
+  removeGladiator,
+  updateGladiator,
+  selectGladiator,
+  setMarketPool,
+  addToMarket,
+  removeFromMarket,
+  purchaseGladiator,
+  sellGladiator,
+  addExperience,
+  levelUp,
+  distributeStatPoints,
+  updateHP,
+  updateStamina,
+  updateMorale,
+  updateFatigue,
+  addFame,
+  recordWin,
+  recordLoss,
+  setTraining,
+  setResting,
+  addInjury,
+  healInjury,
+  updateInjuryRecovery,
+  resetGladiators,
+} = gladiatorsSlice.actions;
+
+// Selectors
+export const selectRoster = (state: { gladiators: GladiatorsState }) => state.gladiators.roster;
+export const selectMarketPool = (state: { gladiators: GladiatorsState }) => state.gladiators.marketPool;
+export const selectGladiatorById = (state: { gladiators: GladiatorsState }, id: string) => 
+  state.gladiators.roster.find(g => g.id === id);
+export const selectSelectedGladiator = (state: { gladiators: GladiatorsState }) => 
+  state.gladiators.roster.find(g => g.id === state.gladiators.selectedGladiatorId);
+
+export default gladiatorsSlice.reducer;

@@ -1,96 +1,68 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAppSelector } from './hooks/useAppSelector';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { MainLayout } from './components/layout/MainLayout';
-import { saveManager } from './utils/SaveManager';
+import React from 'react';
+import { useAppSelector } from '@app/hooks';
+import { TitleScreen, NewGameScreen, DashboardScreen } from '@components/screens';
 
-// Lazy load screens for better performance
-const TitleScreen = lazy(() => import('./components/screens/TitleScreen'));
-const CharacterCreation = lazy(() => import('./components/screens/CharacterCreation'));
-const ProfileScreen = lazy(() => import('./components/screens/ProfileScreen'));
-const MainGameScreen = lazy(() => import('./components/screens/MainGameScreen'));
-const LudusScreen = lazy(() => import('./components/screens/LudusScreen'));
-const TournamentScreen = lazy(() => import('./components/screens/TournamentScreen'));
+// Placeholder screens for features we'll build in later phases
+const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
+  const { MainLayout } = require('@components/layout');
+  return (
+    <MainLayout>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="font-roman text-2xl text-roman-gold-500 mb-4">{name}</h2>
+          <p className="text-roman-marble-400">Coming soon in the next phase...</p>
+        </div>
+      </div>
+    </MainLayout>
+  );
+};
+
+const LudusScreen = () => <PlaceholderScreen name="Ludus Management" />;
+const GladiatorsScreen = () => <PlaceholderScreen name="Gladiators" />;
+const StaffScreen = () => <PlaceholderScreen name="Staff & Personnel" />;
+const MarketplaceScreen = () => <PlaceholderScreen name="Marketplace" />;
+const ArenaScreen = () => <PlaceholderScreen name="Arena" />;
+const CombatScreen = () => <PlaceholderScreen name="Combat" />;
+const QuestsScreen = () => <PlaceholderScreen name="Quests" />;
+const SettingsScreen = () => <PlaceholderScreen name="Settings" />;
 
 const App: React.FC = () => {
-  const characterCreated = useAppSelector((state) => state.player.characterCreated);
-  const hasSave = saveManager.hasSave();
+  const currentScreen = useAppSelector(state => state.game.currentScreen);
 
-  // If no save exists and no character created, force character creation
-  // If save exists but not loaded, character will be created after load
+  // Render the appropriate screen based on game state
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'title':
+        return <TitleScreen />;
+      case 'newGame':
+        return <NewGameScreen />;
+      case 'dashboard':
+        return <DashboardScreen />;
+      case 'ludus':
+        return <LudusScreen />;
+      case 'gladiators':
+        return <GladiatorsScreen />;
+      case 'staff':
+        return <StaffScreen />;
+      case 'marketplace':
+        return <MarketplaceScreen />;
+      case 'arena':
+        return <ArenaScreen />;
+      case 'combat':
+        return <CombatScreen />;
+      case 'quests':
+        return <QuestsScreen />;
+      case 'settings':
+        return <SettingsScreen />;
+      default:
+        return <TitleScreen />;
+    }
+  };
+
   return (
-    <ErrorBoundary>
-      <MainLayout>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                characterCreated ? (
-                  <Navigate to="/title" replace />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              }
-            />
-            <Route path="/character-creation" element={<CharacterCreation />} />
-            <Route 
-              path="/title" 
-              element={
-                characterCreated ? (
-                  <TitleScreen />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/profile" 
-              element={
-                characterCreated ? (
-                  <ProfileScreen />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/game" 
-              element={
-                characterCreated ? (
-                  <MainGameScreen />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/ludus" 
-              element={
-                characterCreated ? (
-                  <LudusScreen />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/tournament" 
-              element={
-                characterCreated ? (
-                  <TournamentScreen />
-                ) : (
-                  <Navigate to="/character-creation" replace />
-                )
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </MainLayout>
-    </ErrorBoundary>
+    <div className="min-h-screen bg-roman-marble-900 text-roman-marble-100">
+      {renderScreen()}
+    </div>
   );
 };
 

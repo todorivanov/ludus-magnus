@@ -2,68 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles */
 @layer base {
-  :root {
-    --grid-cell-size: 60px;
+  html {
+    @apply scroll-smooth;
   }
-
+  
   body {
-    @apply font-sans text-gray-900 dark:text-gray-100;
-    @apply bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900;
-    @apply min-h-screen;
+    @apply font-body antialiased;
+    background: linear-gradient(135deg, #1c1917 0%, #292524 50%, #1c1917 100%);
+    min-height: 100vh;
   }
 
-  * {
-    @apply box-border;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-roman;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-roman-marble-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-roman-bronze-600 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-roman-bronze-500;
   }
 }
 
+/* Component styles */
 @layer components {
-  .btn-primary {
-    @apply rounded-lg bg-primary-500 px-4 py-2 text-white transition-colors;
-    @apply hover:bg-primary-600;
-    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  /* Roman-styled card */
+  .card-roman {
+    @apply bg-gradient-to-br from-roman-marble-800 to-roman-marble-900 
+           border border-roman-bronze-700 rounded-lg shadow-roman
+           backdrop-blur-sm;
   }
 
-  .btn-secondary {
-    @apply rounded-lg border-2 border-primary-500 bg-transparent px-4 py-2 text-primary-500;
-    @apply hover:bg-primary-500 hover:text-white;
-    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  .card-roman-gold {
+    @apply bg-gradient-to-br from-roman-marble-800 to-roman-marble-900 
+           border-2 border-roman-gold-600 rounded-lg shadow-gold-glow;
   }
 
-  .btn-danger {
-    @apply rounded-lg bg-danger-500 px-4 py-2 text-white transition-colors;
-    @apply hover:bg-danger-600;
-    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  /* Roman button styles */
+  .btn-roman {
+    @apply px-4 py-2 font-roman font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-b from-roman-bronze-500 to-roman-bronze-700
+           border border-roman-bronze-400 rounded
+           text-roman-marble-100 shadow-roman
+           hover:from-roman-bronze-400 hover:to-roman-bronze-600
+           active:from-roman-bronze-600 active:to-roman-bronze-800
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
   }
 
-  .card {
-    @apply rounded-lg border border-gray-700 bg-gray-800 shadow-md;
-    @apply dark:border-gray-600 dark:bg-gray-900;
+  .btn-roman-gold {
+    @apply px-4 py-2 font-roman font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-b from-roman-gold-500 to-roman-gold-700
+           border border-roman-gold-400 rounded
+           text-roman-marble-900 shadow-gold-glow
+           hover:from-roman-gold-400 hover:to-roman-gold-600
+           active:from-roman-gold-600 active:to-roman-gold-800
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
   }
 
-  .fighter-card {
-    @apply card p-4 transition-all duration-200;
-    @apply hover:scale-105 hover:shadow-xl;
+  .btn-roman-crimson {
+    @apply px-4 py-2 font-roman font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-b from-roman-crimson-600 to-roman-crimson-800
+           border border-roman-crimson-500 rounded
+           text-roman-marble-100 shadow-crimson-glow
+           hover:from-roman-crimson-500 hover:to-roman-crimson-700
+           active:from-roman-crimson-700 active:to-roman-crimson-900
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
   }
 
-  .input-field {
-    @apply w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-2;
-    @apply text-white placeholder-gray-400;
-    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50;
+  /* Progress bar */
+  .progress-bar {
+    @apply h-3 bg-roman-marble-700 rounded-full overflow-hidden border border-roman-marble-600;
   }
 
-  .glass-effect {
-    @apply border border-white/20 bg-white/10 backdrop-blur-md;
+  .progress-bar-fill {
+    @apply h-full transition-all duration-300 ease-out;
+  }
+
+  /* Roman divider */
+  .divider-roman {
+    @apply h-px bg-gradient-to-r from-transparent via-roman-bronze-600 to-transparent;
+  }
+
+  /* Tooltip */
+  .tooltip-roman {
+    @apply absolute z-50 px-3 py-2 text-sm 
+           bg-roman-marble-800 border border-roman-bronze-600 
+           rounded shadow-roman-lg text-roman-marble-100;
   }
 }
 
+/* Utility classes */
 @layer utilities {
-  .text-shadow {
+  .text-shadow-roman {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   }
 
-  .text-shadow-lg {
-    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-roman-gold-400 via-roman-gold-500 to-roman-gold-600 
+           bg-clip-text text-transparent;
+  }
+
+  .border-gradient-gold {
+    border-image: linear-gradient(to right, #d4a418, #ffd700, #d4a418) 1;
+  }
+
+  /* Shimmer effect for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
   }
 }
