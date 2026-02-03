@@ -1,21 +1,192 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { advanceDay, setScreen } from '@features/game/gameSlice';
-import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar } from '@components/ui';
+import { 
+  advanceDay, 
+  setScreen,
+  setDayReport,
+  hideDayReport,
+  setUnrestLevel,
+} from '@features/game/gameSlice';
+import { addGold, spendGold } from '@features/player/playerSlice';
+import { tickCooldowns as tickQuestCooldowns } from '@features/quests/questsSlice';
+import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
+import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
 import { MainLayout } from '@components/layout';
+import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
+import { clsx } from 'clsx';
+
+const TIME_PHASES = ['dawn', 'morning', 'afternoon', 'evening', 'night'] as const;
 
 export const DashboardScreen: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { currentDay } = useAppSelector(state => state.game);
-  const { gold, ludusFame, resources, ludusName, name } = useAppSelector(state => state.player);
-  const { roster } = useAppSelector(state => state.gladiators);
-  const { buildings } = useAppSelector(state => state.ludus);
-  const { employees, totalDailyWages } = useAppSelector(state => state.staff);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = gameState?.currentDay || 1;
+  const currentPhase = gameState?.currentPhase || 'morning';
+  const showDayReport = gameState?.showDayReport || false;
+  const lastDayReport = gameState?.lastDayReport || null;
+  const unrestLevel = gameState?.unrestLevel || 0;
+  const rebellionWarning = gameState?.rebellionWarning || false;
+  
+  const playerState = useAppSelector(state => state.player);
+  const gold = playerState?.gold || 0;
+  const ludusFame = playerState?.ludusFame || 0;
+  const resources = playerState?.resources || { grain: 0, water: 0, wine: 0 };
+  const ludusName = playerState?.ludusName || 'Ludus';
+  const name = playerState?.name || 'Lanista';
+  
+  const gladiatorsState = useAppSelector(state => state.gladiators);
+  const roster = gladiatorsState?.roster || [];
+  
+  const ludusState = useAppSelector(state => state.ludus);
+  const buildings = ludusState?.buildings || [];
+  
+  const staffState = useAppSelector(state => state.staff);
+  const employees = staffState?.employees || [];
+  const totalDailyWages = staffState?.totalDailyWages || 0;
 
-  const handleEndDay = () => {
+  const [processingDay, setProcessingDay] = useState(false);
+
+  // Calculate daily expenses
+  const foodCosts = roster.length * 2;
+
+  // Process end of day
+  const handleEndDay = useCallback(() => {
+    setProcessingDay(true);
+    
+    const income: { source: string; amount: number }[] = [];
+    const expenses: { source: string; amount: number }[] = [];
+    const events: string[] = [];
+    const alerts: { severity: 'info' | 'warning' | 'danger'; message: string }[] = [];
+
+    // Process expenses
+    if (totalDailyWages > 0) {
+      expenses.push({ source: 'Staff Wages', amount: totalDailyWages });
+    }
+    if (foodCosts > 0) {
+      expenses.push({ source: 'Food & Supplies', amount: foodCosts });
+    }
+
+    // Calculate total expenses
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+    // Fame-based income
+    const fameIncome = Math.floor(ludusFame / 100) * 10;
+    if (fameIncome > 0) {
+      income.push({ source: 'Fame Income', amount: fameIncome });
+    }
+
+    // Calculate total income
+    const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
+
+    // Apply gold changes
+    if (totalIncome > 0) {
+      dispatch(addGold({
+        amount: totalIncome,
+        description: 'Daily Income',
+        category: 'daily',
+        day: currentDay,
+      }));
+    }
+    if (totalExpenses > 0 && gold >= totalExpenses) {
+      dispatch(spendGold({
+        amount: totalExpenses,
+        description: 'Daily Expenses',
+        category: 'daily',
+        day: currentDay,
+      }));
+    } else if (totalExpenses > gold) {
+      alerts.push({
+        severity: 'danger',
+        message: 'Insufficient gold for daily expenses! Staff morale may suffer.',
+      });
+    }
+
+    // Process gladiator recovery
+    roster.forEach(gladiator => {
+      const { events: gladEvents } = processGladiatorDay(
+        gladiator,
+        gladiator.isTraining || false,
+        gladiator.isResting || false
+      );
+      if (gladEvents.length > 0) {
+        events.push(`${gladiator.name}: ${gladEvents.join(', ')}`);
+      }
+    });
+
+    // Calculate unrest
+    const averageMorale = roster.length > 0 
+      ? roster.reduce((sum, g) => sum + (g.morale || 1), 0) / roster.length 
+      : 1;
+    const hasGuards = employees.some(e => e.role === 'guard');
+    const unrest = calculateUnrest(roster, {
+      averageMorale,
+      daysUnpaidWages: gold < totalExpenses ? 1 : 0,
+      recentDeaths: 0,
+      hasGuards,
+      ludusLevel: buildings.length,
+    });
+    dispatch(setUnrestLevel(unrest.level));
+
+    if (unrest.riskOfRebellion) {
+      alerts.push({
+        severity: 'danger',
+        message: 'Gladiator unrest is dangerously high! Risk of rebellion!',
+      });
+    } else if (unrest.level > 50) {
+      alerts.push({
+        severity: 'warning',
+        message: 'Gladiators are becoming restless. Consider improving conditions.',
+      });
+    }
+
+    // Random event
+    const randomEvent: RandomEvent | null = rollRandomEvent(currentDay, ludusFame);
+    if (randomEvent) {
+      events.push(`Event: ${randomEvent.title}`);
+      randomEvent.effects.forEach((effect: RandomEvent['effects'][0]) => {
+        if (effect.type === 'gold') {
+          if (effect.value > 0) {
+            income.push({ source: randomEvent.title, amount: effect.value });
+          } else {
+            expenses.push({ source: randomEvent.title, amount: -effect.value });
+          }
+        }
+        if (effect.type === 'fame') {
+          events.push(`+${effect.value} Fame from ${randomEvent.title}`);
+        }
+      });
+    }
+
+    // Tick cooldowns
+    dispatch(tickQuestCooldowns());
+    dispatch(tickFactionCooldowns());
+
+    // Create day report
+    dispatch(setDayReport({
+      day: currentDay,
+      income,
+      expenses,
+      netGold: totalIncome - totalExpenses,
+      events,
+      alerts,
+    }));
+
+    // Advance day
     dispatch(advanceDay());
-    // In Phase 10, we'll add daily processing logic here
+    setProcessingDay(false);
+  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings]);
+
+  // Get phase icon
+  const getPhaseIcon = (phase: string) => {
+    switch (phase) {
+      case 'dawn': return '🌅';
+      case 'morning': return '☀️';
+      case 'afternoon': return '🌤️';
+      case 'evening': return '🌆';
+      case 'night': return '🌙';
+      default: return '☀️';
+    }
   };
 
   const containerVariants = {
@@ -40,14 +211,53 @@ export const DashboardScreen: React.FC = () => {
         className="space-y-6"
       >
         {/* Welcome Header */}
-        <motion.div variants={itemVariants}>
-          <h1 className="font-roman text-3xl text-roman-gold-500 mb-2">
-            Welcome, {name}
-          </h1>
-          <p className="text-roman-marble-400">
-            Day {currentDay} at {ludusName}
-          </p>
+        <motion.div variants={itemVariants} className="flex justify-between items-start">
+          <div>
+            <h1 className="font-roman text-3xl text-roman-gold-500 mb-2">
+              Welcome, {name}
+            </h1>
+            <p className="text-roman-marble-400">
+              Day {currentDay} at {ludusName}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center gap-2 text-2xl">
+              <span>{getPhaseIcon(currentPhase)}</span>
+              <span className="font-roman text-roman-gold-400 capitalize">{currentPhase}</span>
+            </div>
+            <div className="flex gap-1 mt-2">
+              {TIME_PHASES.map((phase, idx) => (
+                <div
+                  key={phase}
+                  className={clsx(
+                    'w-3 h-3 rounded-full',
+                    TIME_PHASES.indexOf(currentPhase) >= idx
+                      ? 'bg-roman-gold-500'
+                      : 'bg-roman-marble-700'
+                  )}
+                />
+              ))}
+            </div>
+          </div>
         </motion.div>
+
+        {/* Rebellion Warning */}
+        {rebellionWarning && (
+          <motion.div
+            variants={itemVariants}
+            className="bg-roman-crimson-600/20 border-2 border-roman-crimson-600 rounded-lg p-4"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">⚠️</span>
+              <div>
+                <div className="font-roman text-roman-crimson-400">Rebellion Warning!</div>
+                <div className="text-roman-marble-300 text-sm">
+                  Your gladiators are extremely restless. Improve conditions immediately or risk a revolt!
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Quick Stats Row */}
         <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4">
@@ -192,13 +402,44 @@ export const DashboardScreen: React.FC = () => {
                     variant="gold"
                     className="w-full"
                     onClick={handleEndDay}
+                    disabled={processingDay}
                   >
-                    End Day →
+                    {processingDay ? 'Processing...' : 'End Day →'}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Unrest Meter */}
+          {roster.length > 0 && (
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gladiator Unrest</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ProgressBar
+                    value={unrestLevel}
+                    max={100}
+                    variant={unrestLevel >= 75 ? 'health' : 'default'}
+                    size="md"
+                  />
+                  <div className="flex justify-between mt-2 text-xs text-roman-marble-500">
+                    <span>Peaceful</span>
+                    <span className={clsx(
+                      unrestLevel >= 75 ? 'text-roman-crimson-400' :
+                      unrestLevel >= 50 ? 'text-orange-400' :
+                      'text-health-high'
+                    )}>
+                      {unrestLevel}%
+                    </span>
+                    <span>Rebellion</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </div>
 
         {/* Active Notifications */}
@@ -217,6 +458,116 @@ export const DashboardScreen: React.FC = () => {
             </Card>
           </motion.div>
         )}
+
+        {/* Day Report Modal */}
+        <Modal
+          isOpen={showDayReport}
+          onClose={() => dispatch(hideDayReport())}
+          title={`Day ${lastDayReport?.day || currentDay - 1} Summary`}
+          size="lg"
+        >
+          {lastDayReport && (
+            <div className="space-y-6">
+              {/* Alerts */}
+              {lastDayReport.alerts.length > 0 && (
+                <div className="space-y-2">
+                  {lastDayReport.alerts.map((alert, idx) => (
+                    <div
+                      key={idx}
+                      className={clsx(
+                        'p-3 rounded-lg border',
+                        alert.severity === 'danger' && 'bg-roman-crimson-600/20 border-roman-crimson-600',
+                        alert.severity === 'warning' && 'bg-orange-600/20 border-orange-600',
+                        alert.severity === 'info' && 'bg-blue-600/20 border-blue-600'
+                      )}
+                    >
+                      <span className={clsx(
+                        alert.severity === 'danger' && 'text-roman-crimson-400',
+                        alert.severity === 'warning' && 'text-orange-400',
+                        alert.severity === 'info' && 'text-blue-400'
+                      )}>
+                        {alert.message}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Financial Summary */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Income */}
+                <div className="bg-roman-marble-800 p-4 rounded-lg">
+                  <h4 className="font-roman text-health-high mb-3">Income</h4>
+                  {lastDayReport.income.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No income today</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {lastDayReport.income.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-roman-marble-400">{item.source}</span>
+                          <span className="text-health-high">+{item.amount}g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Expenses */}
+                <div className="bg-roman-marble-800 p-4 rounded-lg">
+                  <h4 className="font-roman text-roman-crimson-400 mb-3">Expenses</h4>
+                  {lastDayReport.expenses.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No expenses today</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {lastDayReport.expenses.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-roman-marble-400">{item.source}</span>
+                          <span className="text-roman-crimson-400">-{item.amount}g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Net Gold */}
+              <div className={clsx(
+                'p-4 rounded-lg text-center',
+                lastDayReport.netGold >= 0 
+                  ? 'bg-health-high/20 border border-health-high' 
+                  : 'bg-roman-crimson-600/20 border border-roman-crimson-600'
+              )}>
+                <div className="text-roman-marble-400 text-sm">Net Change</div>
+                <div className={clsx(
+                  'font-roman text-2xl',
+                  lastDayReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
+                )}>
+                  {lastDayReport.netGold >= 0 ? '+' : ''}{lastDayReport.netGold}g
+                </div>
+              </div>
+
+              {/* Events */}
+              {lastDayReport.events.length > 0 && (
+                <div className="bg-roman-marble-800 p-4 rounded-lg">
+                  <h4 className="font-roman text-roman-gold-400 mb-3">Events</h4>
+                  <div className="space-y-1 text-sm text-roman-marble-300">
+                    {lastDayReport.events.map((event, idx) => (
+                      <div key={idx}>• {event}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                variant="gold"
+                className="w-full"
+                onClick={() => dispatch(hideDayReport())}
+              >
+                Continue to Day {currentDay}
+              </Button>
+            </div>
+          )}
+        </Modal>
       </motion.div>
     </MainLayout>
   );
