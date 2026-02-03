@@ -9,6 +9,8 @@ import {
   LudusScreen,
   TrainingScreen,
   StaffScreen,
+  ArenaScreen,
+  CombatScreen,
 } from '@components/screens';
 import { MainLayout } from '@components/layout';
 
@@ -27,8 +29,6 @@ const PlaceholderScreen: React.FC<{ name: string }> = ({ name }) => {
 };
 
 // Remaining placeholder screens
-const ArenaScreen = () => <PlaceholderScreen name="Arena" />;
-const CombatScreen = () => <PlaceholderScreen name="Combat" />;
 const QuestsScreen = () => <PlaceholderScreen name="Quests" />;
 const SettingsScreen = () => <PlaceholderScreen name="Settings" />;
 

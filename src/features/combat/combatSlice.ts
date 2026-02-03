@@ -1,5 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { CombatMatch, CombatLogEntry } from '@/types';
+import type { CombatMatch, CombatLogEntry, Gladiator, GladiatorClass } from '@/types';
+
+interface OpponentData {
+  name: string;
+  class: GladiatorClass;
+  level: number;
+  stats: { strength: number; agility: number; dexterity: number; endurance: number; constitution: number };
+  hp: number;
+  stamina: number;
+}
 
 interface CombatState {
   currentMatch: CombatMatch | null;
@@ -7,6 +16,12 @@ interface CombatState {
   currentTurn: number;
   isPlayerTurn: boolean;
   matchHistory: CombatMatch[];
+  // New fields for combat screen
+  gladiator: Gladiator | null;
+  opponent: OpponentData | null;
+  matchType: string;
+  rules: 'submission' | 'death' | 'first_blood';
+  maxRounds: number;
 }
 
 const initialState: CombatState = {
@@ -15,6 +30,11 @@ const initialState: CombatState = {
   currentTurn: 0,
   isPlayerTurn: true,
   matchHistory: [],
+  gladiator: null,
+  opponent: null,
+  matchType: '',
+  rules: 'submission',
+  maxRounds: 10,
 };
 
 const combatSlice = createSlice({
@@ -40,6 +60,35 @@ const combatSlice = createSlice({
       state.currentMatch = null;
       state.isInCombat = false;
       state.currentTurn = 0;
+    },
+    
+    // New combat system
+    startCombat: (state, action: PayloadAction<{
+      gladiator: Gladiator;
+      opponent: OpponentData;
+      matchType: string;
+      rules: 'submission' | 'death' | 'first_blood';
+      maxRounds: number;
+    }>) => {
+      state.gladiator = action.payload.gladiator;
+      state.opponent = action.payload.opponent;
+      state.matchType = action.payload.matchType;
+      state.rules = action.payload.rules;
+      state.maxRounds = action.payload.maxRounds;
+      state.isInCombat = true;
+      state.currentTurn = 1;
+    },
+    endCombat: (state) => {
+      state.gladiator = null;
+      state.opponent = null;
+      state.matchType = '';
+      state.isInCombat = false;
+      state.currentTurn = 0;
+    },
+    executeAction: (state, _action: PayloadAction<{ action: string }>) => {
+      // Action execution is handled by the CombatEngine
+      // This is just for logging purposes
+      state.currentTurn += 1;
     },
     
     // Turn management
@@ -92,6 +141,9 @@ export const {
   startMatch,
   endMatch,
   cancelMatch,
+  startCombat,
+  endCombat,
+  executeAction,
   nextTurn,
   setPlayerTurn,
   addLogEntry,

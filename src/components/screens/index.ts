@@ -6,3 +6,5 @@ export { GladiatorsScreen } from './GladiatorsScreen';
 export { LudusScreen } from './LudusScreen';
 export { TrainingScreen } from './TrainingScreen';
 export { StaffScreen } from './StaffScreen';
+export { ArenaScreen } from './ArenaScreen';
+export { CombatScreen } from './CombatScreen';
