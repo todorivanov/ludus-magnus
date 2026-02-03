@@ -1,0 +1,38 @@
+module.exports = {
+  root: true,
+  env: { browser: true, es2020: true },
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react-hooks/recommended',
+  ],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'node_modules'],
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  },
+  plugins: ['react-refresh', '@typescript-eslint'],
+  rules: {
+    'react-refresh/only-export-components': [
+      'warn',
+      { allowConstantExport: true },
+    ],
+    // Relaxed rules for game development
+    '@typescript-eslint/no-unused-vars': ['warn', { 
+      argsIgnorePattern: '^_',
+      varsIgnorePattern: '^_',
+    }],
+    '@typescript-eslint/no-explicit-any': 'warn',
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    // Prefer const
+    'prefer-const': 'warn',
+    // No var
+    'no-var': 'error',
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
+};

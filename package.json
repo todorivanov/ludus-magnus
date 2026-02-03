@@ -1,16 +1,41 @@
 {
   "name": "ludus-magnus-reborn",
   "version": "1.0.0",
-  "description": "A gladiator management RPG where you build your ludus, manage fighters, and conquer the arena",
+  "description": "A Roman gladiator ludus management simulation game. Build your gladiator school, train legendary fighters, and conquer the arena.",
+  "author": "Legends of the Arena Contributors",
+  "license": "MIT",
+  "private": false,
   "type": "module",
+  "keywords": [
+    "game",
+    "simulation",
+    "management",
+    "gladiator",
+    "roman",
+    "arena",
+    "react",
+    "typescript",
+    "redux"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/todorivanov/ludus-magnus"
+  },
+  "bugs": {
+    "url": "https://github.com/todorivanov/ludus-magnus/issues"
+  },
+  "homepage": "https://github.com/todorivanov/ludus-magnus#readme",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "prepare": "echo 'Ready for development'"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.1",
@@ -28,6 +53,8 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^4.2.1",
     "@testing-library/react": "^14.2.1",
     "@testing-library/jest-dom": "^6.4.2",
@@ -36,10 +63,15 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.35",
+    "prettier": "^3.2.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.2",
     "vite": "^5.1.4",
     "vitest": "^1.3.1",
     "jsdom": "^24.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
