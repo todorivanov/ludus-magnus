@@ -3,10 +3,12 @@ import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { setMarketPool, purchaseGladiator } from '@features/gladiators/gladiatorsSlice';
 import { spendGold, addResource, consumeResource } from '@features/player/playerSlice';
+import { incrementObjective } from '@features/quests/questsSlice';
 import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@components/ui';
 import { generateMarketPool } from '@utils/gladiatorGenerator';
 import { GLADIATOR_CLASSES, GLADIATOR_ORIGINS } from '@data/gladiatorClasses';
+import { getQuestById } from '@data/quests';
 import type { Gladiator, Resources } from '@/types';
 import { clsx } from 'clsx';
 
@@ -18,6 +20,7 @@ export const MarketplaceScreen: React.FC = () => {
   const { marketPool } = useAppSelector(state => state.gladiators);
   const { marketPrices } = useAppSelector(state => state.economy);
   const { currentDay } = useAppSelector(state => state.game);
+  const { activeQuests } = useAppSelector(state => state.quests);
   
   const [activeTab, setActiveTab] = useState<MarketTab>('gladiators');
   const [selectedGladiator, setSelectedGladiator] = useState<Gladiator | null>(null);
@@ -47,6 +50,23 @@ export const MarketplaceScreen: React.FC = () => {
       }));
       dispatch(purchaseGladiator(gladiator.id));
       setSelectedGladiator(null);
+      
+      // Update quest objectives for recruiting gladiators
+      activeQuests.forEach(activeQuest => {
+        const questData = getQuestById(activeQuest.questId);
+        if (questData) {
+          questData.objectives.forEach(objective => {
+            if (objective.type === 'recruit_gladiator') {
+              dispatch(incrementObjective({
+                questId: activeQuest.questId,
+                objectiveId: objective.id,
+                amount: 1,
+                required: objective.required,
+              }));
+            }
+          });
+        }
+      });
     }
   };
 

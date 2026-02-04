@@ -10,6 +10,8 @@ import {
   recordSabotage,
 } from '@features/factions/factionsSlice';
 import { addLudusFame } from '@features/fame/fameSlice';
+import { updateObjective } from '@features/quests/questsSlice';
+import { getQuestById } from '@data/quests';
 import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button, Modal, ProgressBar } from '@components/ui';
 import { 
@@ -41,6 +43,9 @@ export const PoliticsScreen: React.FC = () => {
   
   const { gold } = useAppSelector(state => state.player);
   const { currentDay } = useAppSelector(state => state.game);
+  const questsState = useAppSelector(state => state.quests);
+  const activeQuests = questsState?.activeQuests || [];
+  const currentLudusFame = useAppSelector(state => state.fame?.ludusFame || 0);
 
   const [selectedFaction, setSelectedFaction] = useState<FactionId | null>(null);
   const [selectedAction, setSelectedAction] = useState<PoliticalAction | null>(null);
@@ -50,6 +55,25 @@ export const PoliticsScreen: React.FC = () => {
 
   // Calculate modifiers from faction standings
   const modifiers = calculateFactionModifiers(factionFavors);
+
+  // Helper to update fame objectives in all active quests
+  const updateFameObjectives = (newFameTotal: number) => {
+    activeQuests.forEach(activeQuest => {
+      const questData = getQuestById(activeQuest.questId);
+      if (questData) {
+        questData.objectives.forEach(objective => {
+          if (objective.type === 'gain_fame') {
+            dispatch(updateObjective({
+              questId: activeQuest.questId,
+              objectiveId: objective.id,
+              progress: newFameTotal,
+              required: objective.required,
+            }));
+          }
+        });
+      }
+    });
+  };
 
   // Handle political action
   const handleExecuteAction = () => {
@@ -103,6 +127,8 @@ export const PoliticsScreen: React.FC = () => {
         // Lose favor with both factions on failed sabotage/bribe
         dispatch(adjustFavor({ faction: selectedFaction, amount: -15 }));
         dispatch(addLudusFame({ amount: -10, source: 'Political failure', day: currentDay }));
+        // Update fame objectives
+        updateFameObjectives(Math.max(0, currentLudusFame - 10));
       }
 
       setActionResult({

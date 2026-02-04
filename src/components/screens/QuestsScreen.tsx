@@ -8,6 +8,7 @@ import {
   recordChoice,
   setActiveDialogue,
   advanceChapter,
+  updateObjective,
 } from '@features/quests/questsSlice';
 import { addGold, spendGold } from '@features/player/playerSlice';
 import { addLudusFame } from '@features/fame/fameSlice';
@@ -96,6 +97,25 @@ export const QuestsScreen: React.FC = () => {
   };
 
   // Handle quest acceptance
+  // Helper to update fame objectives in all active quests
+  const updateFameObjectives = (newFameTotal: number) => {
+    activeQuests.forEach(activeQuest => {
+      const questData = getQuestById(activeQuest.questId);
+      if (questData) {
+        questData.objectives.forEach(objective => {
+          if (objective.type === 'gain_fame') {
+            dispatch(updateObjective({
+              questId: activeQuest.questId,
+              objectiveId: objective.id,
+              progress: newFameTotal,
+              required: objective.required,
+            }));
+          }
+        });
+      }
+    });
+  };
+
   const handleAcceptQuest = (quest: Quest) => {
     dispatch(startQuest({
       questId: quest.id,
@@ -151,6 +171,8 @@ export const QuestsScreen: React.FC = () => {
             source: `Quest: ${quest.title}`,
             day: currentDay,
           }));
+          // Update fame objectives in other active quests
+          updateFameObjectives(ludusFame + consequence.value);
           break;
         case 'favor':
           if (consequence.target) {
@@ -221,6 +243,8 @@ export const QuestsScreen: React.FC = () => {
             source: `Quest Reward: ${quest.title}`,
             day: currentDay,
           }));
+          // Update fame objectives in other active quests
+          updateFameObjectives(ludusFame + reward.value);
           break;
         case 'faction_favor':
           if (reward.target) {

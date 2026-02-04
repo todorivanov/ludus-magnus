@@ -17,6 +17,7 @@ import {
   updateUpgradeProgress,
   completeUpgrade,
 } from '@features/ludus/ludusSlice';
+import { updateGladiator } from '@features/gladiators/gladiatorsSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
 import { MainLayout } from '@components/layout';
 import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
@@ -110,11 +111,17 @@ export const DashboardScreen: React.FC = () => {
 
     // Process gladiator recovery
     roster.forEach(gladiator => {
-      const { events: gladEvents } = processGladiatorDay(
+      const { updates, events: gladEvents } = processGladiatorDay(
         gladiator,
         gladiator.isTraining || false,
         gladiator.isResting || false
       );
+      
+      // Apply the updates to the gladiator
+      if (Object.keys(updates).length > 0) {
+        dispatch(updateGladiator({ id: gladiator.id, updates }));
+      }
+      
       if (gladEvents.length > 0) {
         events.push(`${gladiator.name}: ${gladEvents.join(', ')}`);
       }

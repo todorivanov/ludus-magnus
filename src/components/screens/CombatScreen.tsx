@@ -14,6 +14,9 @@ import {
   addInjury,
 } from '@features/gladiators/gladiatorsSlice';
 import { addGold } from '@features/player/playerSlice';
+import { addLudusFame } from '@features/fame/fameSlice';
+import { incrementObjective, updateObjective } from '@features/quests/questsSlice';
+import { getQuestById } from '@data/quests';
 import { Card, CardContent, Button, ProgressBar } from '@components/ui';
 import { 
   COMBAT_ACTIONS, 
@@ -30,7 +33,11 @@ import { v4 as uuidv4 } from 'uuid';
 export const CombatScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const combatState = useAppSelector(state => state.combat);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameStateRedux = useAppSelector(state => state.game);
+  const currentDay = gameStateRedux?.currentDay || 1;
+  const questsState = useAppSelector(state => state.quests);
+  const activeQuests = questsState?.activeQuests || [];
+  const currentLudusFame = useAppSelector(state => state.fame?.ludusFame || 0);
   
   const [engine, setEngine] = useState<CombatEngine | null>(null);
   const [gameState, setGameState] = useState<CombatState | null>(null);
@@ -132,6 +139,42 @@ export const CombatScreen: React.FC = () => {
       }));
       dispatch(addFame({ id: combatState.gladiator.id, amount: fameReward }));
       dispatch(recordWin({ id: combatState.gladiator.id, wasKill: gameState.opponent.currentHP <= 0 }));
+      
+      // Also add ludus fame for victories
+      dispatch(addLudusFame({
+        amount: fameReward,
+        source: `Arena Victory: ${matchData.name}`,
+        day: currentDay,
+      }));
+      
+      // Calculate new ludus fame for objective updates
+      const newLudusFame = currentLudusFame + fameReward;
+
+      // Update quest objectives for wins and fame
+      activeQuests.forEach(activeQuest => {
+        const questData = getQuestById(activeQuest.questId);
+        if (questData) {
+          questData.objectives.forEach(objective => {
+            if (objective.type === 'win_matches') {
+              dispatch(incrementObjective({
+                questId: activeQuest.questId,
+                objectiveId: objective.id,
+                amount: 1,
+                required: objective.required,
+              }));
+            }
+            // Update fame objectives with current total fame
+            if (objective.type === 'gain_fame') {
+              dispatch(updateObjective({
+                questId: activeQuest.questId,
+                objectiveId: objective.id,
+                progress: newLudusFame,
+                required: objective.required,
+              }));
+            }
+          });
+        }
+      });
     } else {
       // Defeat
       dispatch(recordLoss({ id: combatState.gladiator.id }));
