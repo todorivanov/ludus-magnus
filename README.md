@@ -1,8 +1,8 @@
-# Legends of the Arena
+# Ludus Magnus: Reborn
 
 <div align="center">
 
-![Legends of the Arena](https://img.shields.io/badge/Status-In%20Development-gold?style=for-the-badge)
+![Ludus Magnus: Reborn](https://img.shields.io/badge/Status-Released-gold?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?style=for-the-badge&logo=typescript)
 ![Tailwind](https://img.shields.io/badge/Tailwind-3+-38B2AC?style=for-the-badge&logo=tailwindcss)
@@ -19,7 +19,7 @@
 
 ## 📜 About
 
-**Legends of the Arena** is a web-based management simulation game where you take on the role of a *lanista* - the owner of a Roman gladiator school (*ludus*). Set in ancient Rome, you'll recruit and train gladiators, manage your facilities, navigate treacherous politics, and compete for glory in the arena.
+**Ludus Magnus: Reborn** is a web-based management simulation game where you take on the role of a *lanista* - the owner of a Roman gladiator school (*ludus*). Set in ancient Rome, you'll recruit and train gladiators, manage your facilities, navigate treacherous politics, and compete for glory in the arena.
 
 This game is built entirely with modern web technologies and runs in your browser with no backend required. All game data is saved locally using your browser's storage.
 

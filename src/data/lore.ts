@@ -783,7 +783,7 @@ Favor ranges from -100 (Hostile) to +100 (Allied):
     unlockCondition: { type: 'always' },
     content: `# Getting Started Guide
 
-Welcome to Legends of the Arena! This guide will help you build a successful gladiator school.
+Welcome to Ludus Magnus: Reborn! This guide will help you build a successful gladiator school.
 
 ## Day 1: The Basics
 

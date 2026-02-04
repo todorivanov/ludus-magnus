@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Legends of the Arena will be documented in this file.
+All notable changes to Ludus Magnus: Reborn will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-02-04
 
-This is the first public release of **Legends of the Arena**, a complete Roman gladiator ludus management simulation.
+This is the first public release of **Ludus Magnus: Reborn**, a complete Roman gladiator ludus management simulation.
 
 ### Added
 

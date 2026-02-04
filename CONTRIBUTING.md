@@ -1,6 +1,6 @@
-# Contributing to Legends of the Arena
+# Contributing to Ludus Magnus: Reborn
 
-Thank you for your interest in contributing to Legends of the Arena! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Ludus Magnus: Reborn! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -251,4 +251,4 @@ If you have questions or need help:
 
 ---
 
-Thank you for contributing to Legends of the Arena! Your efforts help make this game better for everyone. 🏛️⚔️
+Thank you for contributing to Ludus Magnus: Reborn! Your efforts help make this game better for everyone. 🏛️⚔️

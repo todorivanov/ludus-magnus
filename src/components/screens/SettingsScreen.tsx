@@ -219,7 +219,7 @@ export const SettingsScreen: React.FC = () => {
           <Card variant="gold">
             <CardContent className="text-center py-6">
               <h3 className="font-roman text-xl text-roman-gold-400 mb-2">
-                Legends of the Arena
+                Ludus Magnus: Reborn
               </h3>
               <p className="text-roman-marble-400 text-sm mb-4">
                 A Roman Gladiator Management Simulation

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legends of the Arena is a client-side web game that runs entirely in the browser. All game data is stored locally using browser storage (localStorage via Redux Persist). There is no backend server, user accounts, or sensitive data transmission.
+Ludus Magnus: Reborn is a client-side web game that runs entirely in the browser. All game data is stored locally using browser storage (localStorage via Redux Persist). There is no backend server, user accounts, or sensitive data transmission.
 
 ## Supported Versions
 
@@ -32,7 +32,7 @@ All dependencies are regularly updated to address known vulnerabilities.
 
 ## Reporting a Vulnerability
 
-While Legends of the Arena is a client-side game with no sensitive data handling, we still take security seriously.
+While Ludus Magnus: Reborn is a client-side game with no sensitive data handling, we still take security seriously.
 
 ### What to Report
 
@@ -86,4 +86,4 @@ This is a hobby/open-source project. While we strive to follow security best pra
 
 ---
 
-Thank you for helping keep Legends of the Arena safe for everyone!
+Thank you for helping keep Ludus Magnus: Reborn safe for everyone!

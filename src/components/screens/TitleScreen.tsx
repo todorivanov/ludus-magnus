@@ -147,12 +147,12 @@ export const TitleScreen: React.FC = () => {
                 className="font-roman text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-gradient-gold mb-2"
                 style={{ textShadow: '0 0 40px rgba(212, 164, 24, 0.3)' }}
               >
-                LEGENDS
+                LUDUS MAGNUS
               </motion.h1>
               <motion.h2 
                 className="font-roman text-xl sm:text-2xl md:text-3xl text-roman-gold-500 tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-2"
               >
-                of the Arena
+                Reborn
               </motion.h2>
             </motion.div>
 
