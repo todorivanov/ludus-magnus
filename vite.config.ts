@@ -3,8 +3,9 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import pkg from './package.json';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  base: mode === 'production' ? '/ludus-magnus/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -24,4 +25,4 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
-});
+}));
