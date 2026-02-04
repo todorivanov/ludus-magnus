@@ -11,6 +11,12 @@ import {
 import { addGold, spendGold } from '@features/player/playerSlice';
 import { tickCooldowns as tickQuestCooldowns } from '@features/quests/questsSlice';
 import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
+import { 
+  updateConstructionProgress, 
+  completeConstruction,
+  updateUpgradeProgress,
+  completeUpgrade,
+} from '@features/ludus/ludusSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
 import { MainLayout } from '@components/layout';
 import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
@@ -157,6 +163,31 @@ export const DashboardScreen: React.FC = () => {
         }
       });
     }
+
+    // Process building construction and upgrades
+    buildings.forEach(building => {
+      // Handle construction
+      if (building.isUnderConstruction && building.constructionDaysRemaining !== undefined) {
+        const newDays = building.constructionDaysRemaining - 1;
+        if (newDays <= 0) {
+          dispatch(completeConstruction(building.id));
+          events.push(`Construction complete: ${building.type}`);
+        } else {
+          dispatch(updateConstructionProgress({ id: building.id, daysRemaining: newDays }));
+        }
+      }
+      
+      // Handle upgrades
+      if (building.isUpgrading && building.upgradeDaysRemaining !== undefined) {
+        const newDays = building.upgradeDaysRemaining - 1;
+        if (newDays <= 0) {
+          dispatch(completeUpgrade(building.id));
+          events.push(`Upgrade complete: ${building.type} to level ${building.level + 1}`);
+        } else {
+          dispatch(updateUpgradeProgress({ id: building.id, daysRemaining: newDays }));
+        }
+      }
+    });
 
     // Tick cooldowns
     dispatch(tickQuestCooldowns());
