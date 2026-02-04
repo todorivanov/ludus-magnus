@@ -46,6 +46,8 @@ export const QuestsScreen: React.FC = () => {
   const buildings = ludusState?.buildings || [];
   const factionsState = useAppSelector(state => state.factions);
   const factionFavors = factionsState?.factionFavors || { optimates: 0, populares: 0, military: 0, merchants: 0 };
+  const staffState = useAppSelector(state => state.staff);
+  const employees = staffState?.employees || [];
 
   const [activeTab, setActiveTab] = useState<'story' | 'side' | 'daily' | 'completed'>('story');
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
@@ -122,6 +124,55 @@ export const QuestsScreen: React.FC = () => {
       startDay: currentDay,
       objectives: quest.objectives.map(o => ({ id: o.id, required: o.required })),
     }));
+
+    // Update objectives with current progress based on objective type
+    quest.objectives.forEach(objective => {
+      let currentProgress = 0;
+      
+      switch (objective.type) {
+        case 'gain_fame':
+          // Fame objectives check current fame level
+          currentProgress = ludusFame;
+          break;
+        case 'build':
+          // Check if the target building exists
+          if (objective.target) {
+            const hasBuilding = buildings.some(b => b.type === objective.target && !b.isUnderConstruction);
+            currentProgress = hasBuilding ? 1 : 0;
+          }
+          break;
+        case 'recruit_gladiator':
+          // Count current gladiators
+          currentProgress = roster.length;
+          break;
+        case 'reach_favor':
+          // Check faction favor level
+          if (objective.target) {
+            currentProgress = factionFavors[objective.target as keyof typeof factionFavors] || 0;
+          }
+          break;
+        case 'hire_staff':
+          // Check if staff of target type exists
+          if (objective.target) {
+            const hasStaff = employees.some(e => e.role === objective.target);
+            currentProgress = hasStaff ? 1 : 0;
+          }
+          break;
+        // win_matches, train, earn_gold, custom - start at 0 as they track NEW actions
+        default:
+          currentProgress = 0;
+      }
+      
+      // Update objective if there's existing progress
+      if (currentProgress > 0) {
+        dispatch(updateObjective({
+          questId: quest.id,
+          objectiveId: objective.id,
+          progress: currentProgress,
+          required: objective.required,
+        }));
+      }
+    });
 
     // Show intro dialogue if available
     if (quest.introDialogue && quest.introDialogue.length > 0) {

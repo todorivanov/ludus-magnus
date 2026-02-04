@@ -164,8 +164,8 @@ export const processGladiatorDay = (
   
   // Natural HP recovery with nutrition modifier
   if (gladiator.currentHP < gladiator.maxHP) {
-    const baseRecovery = 5;
-    const restBonus = isResting ? 10 : 0;
+    const baseRecovery = 20; // Increased from 5
+    const restBonus = isResting ? 30 : 0; // Increased from 10 (total 50 when resting)
     const nutritionBonus = nutrition.effects.healingModifier / 100;
     const recovery = Math.min(
       Math.round((baseRecovery + restBonus) * (1 + nutritionBonus)), 
@@ -177,13 +177,12 @@ export const processGladiatorDay = (
     }
   }
   
-  // Stamina recovery with nutrition effect
+  // Stamina recovery - full recovery when resting, partial otherwise
   if (gladiator.currentStamina < gladiator.maxStamina) {
-    const baseStaminaRecovery = isResting ? 30 : 15;
-    const staminaRecovery = Math.min(
-      baseStaminaRecovery,
-      gladiator.maxStamina - gladiator.currentStamina
-    );
+    // Resting = full stamina recovery, otherwise recover 50%
+    const staminaRecovery = isResting 
+      ? gladiator.maxStamina - gladiator.currentStamina 
+      : Math.min(Math.round(gladiator.maxStamina * 0.5), gladiator.maxStamina - gladiator.currentStamina);
     if (staminaRecovery > 0) {
       updates.currentStamina = gladiator.currentStamina + staminaRecovery;
       events.push(`Recovered ${staminaRecovery} stamina`);
@@ -282,15 +281,15 @@ export const processGladiatorDay = (
   
   // Resting effects with nutrition bonus
   if (isResting) {
-    // Fatigue decreases - better nutrition = faster recovery
-    const baseFatigueRecovery = 0.2;
+    // Fatigue decreases significantly - better nutrition = faster recovery
+    const baseFatigueRecovery = 0.5; // Increased from 0.2 (clears fatigue in ~2 days)
     const nutritionFatigueBonus = nutrition.effects.fatigueRecovery / 100;
     const newFatigue = Math.max(0, (gladiator.fatigue || 0) - baseFatigueRecovery - nutritionFatigueBonus);
     updates.fatigue = newFatigue;
     
     // Morale increases with nutrition bonus
-    const baseMoraleGain = 0.05;
-    const nutritionMoraleBonus = nutrition.effects.moraleModifier / 200; // Half effect for resting
+    const baseMoraleGain = 0.15; // Increased from 0.05
+    const nutritionMoraleBonus = nutrition.effects.moraleModifier / 200;
     const newMorale = Math.min(1.5, (gladiator.morale || 1) + baseMoraleGain + nutritionMoraleBonus);
     updates.morale = newMorale;
     

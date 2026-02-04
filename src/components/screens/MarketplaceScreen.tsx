@@ -82,6 +82,24 @@ export const MarketplaceScreen: React.FC = () => {
         day: currentDay,
       }));
       dispatch(addResource({ resource, amount }));
+      
+      // Update quest objectives for marketplace purchases
+      activeQuests.forEach(activeQuest => {
+        const questData = getQuestById(activeQuest.questId);
+        if (questData) {
+          questData.objectives.forEach(objective => {
+            // Handle "custom" type for marketplace purchases (daily_merchant quest)
+            if (objective.type === 'custom' && objective.id === 'purchase') {
+              dispatch(incrementObjective({
+                questId: activeQuest.questId,
+                objectiveId: objective.id,
+                amount: 1,
+                required: objective.required,
+              }));
+            }
+          });
+        }
+      });
     }
   };
 
