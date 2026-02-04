@@ -4,6 +4,10 @@ import { useAppDispatch, useAppSelector } from '@app/hooks';
 import { setScreen } from '@features/game/gameSlice';
 import { Button } from '@components/ui';
 
+// Version from build
+const APP_VERSION = __APP_VERSION__;
+const REPO_URL = 'https://github.com/todorivanov/ludus-magnus';
+
 // Floating particle component
 const FloatingParticle: React.FC<{ delay: number }> = ({ delay }) => {
   const randomX = Math.random() * 100;
@@ -231,11 +235,22 @@ export const TitleScreen: React.FC = () => {
             {/* Version & Credits */}
             <motion.div
               variants={itemVariants}
-              className="mt-10 sm:mt-12 space-y-1"
+              className="mt-10 sm:mt-12 space-y-2"
             >
-              <p className="text-roman-marble-600 text-xs sm:text-sm">
-                Version 1.0.0
-              </p>
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                <span className="text-roman-marble-600">
+                  v{APP_VERSION}
+                </span>
+                <span className="text-roman-marble-700">•</span>
+                <a
+                  href={`${REPO_URL}/blob/main/CHANGELOG.md`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-roman-marble-500 hover:text-roman-gold-500 transition-colors"
+                >
+                  Changelog
+                </a>
+              </div>
               <p className="text-roman-marble-700 text-xs">
                 A Roman Gladiator Management Game
               </p>

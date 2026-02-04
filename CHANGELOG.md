@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-02-03
+## [1.0.0] - 2026-02-04
+
+This is the first public release of **Legends of the Arena**, a complete Roman gladiator ludus management simulation.
 
 ### Added
 
@@ -29,36 +31,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Game Features
 - **Ludus Management**: Build and upgrade your gladiator school
-- **Gladiator System**: Recruit, train, and manage fighters
-- **Combat Arena**: Multiple match types (Pit Fights, Munera, Championships)
-- **Staff System**: Hire and manage personnel (Doctore, Medicus, Faber, etc.)
-- **Economy**: Gold-based economy with marketplace
-- **Fame System**: Dual fame tracking (Ludus + Individual Gladiators)
-- **Political Factions**: 4 factions with favor system
-- **Quest System**: Story campaign with 5 chapters + side quests
-- **Time System**: Day progression with random events
+- **Gladiator System**: Recruit, train, and manage fighters with detailed stats
+- **Training System**: Multiple training regimens and nutrition options
+- **Combat Arena**: Multiple match types (Pit Fights, Munera, Grand Munera, Championships)
+- **Staff System**: Hire and manage personnel (Doctore, Medicus, Faber, Cook, Guard, Accountant, Scout)
+- **Economy**: Gold-based economy with marketplace for gladiators and resources
+- **Fame System**: Dual fame tracking for Ludus and individual Gladiators
+- **Political Factions**: 4 factions (Optimates, Populares, Military, Merchants) with favor system
+- **Quest System**: Story campaign with 5 chapters + side quests and daily quests
+- **Time System**: Day progression with random events and rebellion mechanics
 
 #### UI/UX
-- Roman-themed visual design
+- Roman-themed visual design with custom color palette
 - Responsive layout for desktop, tablet, and mobile
-- Framer Motion animations
-- In-game Codex with lore and tutorials
+- Framer Motion animations throughout
+- In-game Codex with lore, tutorials, and game mechanics
 - Toast notification system
 - Settings screen with difficulty options
+- Dynamic version display with changelog link
 
 #### Technical
 - React 18 with TypeScript
 - Redux Toolkit for state management
 - Redux Persist for save games (localStorage)
-- Tailwind CSS with custom theme
-- Vite build system
+- Tailwind CSS with custom Roman theme
+- Vite build system with optimized builds
+- GitHub Actions CI/CD pipeline
+- Deployment to GitHub Pages on release
 
 ### Documentation
-- Comprehensive README
-- Contributing guidelines
-- Code of Conduct
-- Security policy
-- In-game Codex with historical lore
+- Comprehensive README with getting started guide
+- Contributing guidelines (CONTRIBUTING.md)
+- Code of Conduct (CODE_OF_CONDUCT.md)
+- Security policy (SECURITY.md)
+- In-game Codex with historical Roman lore
+- GitHub issue templates for bugs, features, and balance feedback
 
 ---
 
@@ -66,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.0.0 | 2026-02-03 | Initial release with full game systems |
+| 1.0.0 | 2026-02-04 | Initial public release with full game systems |
 
 ---
 

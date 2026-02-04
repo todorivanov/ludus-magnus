@@ -13,6 +13,10 @@ import { Card, CardHeader, CardTitle, CardContent, Button, Modal, Divider } from
 import type { Difficulty } from '@/types';
 import { clsx } from 'clsx';
 
+// Import version from package.json
+const APP_VERSION = __APP_VERSION__;
+const REPO_URL = 'https://github.com/todorivanov/ludus-magnus';
+
 export const SettingsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const gameState = useAppSelector(state => state.game);
@@ -210,7 +214,7 @@ export const SettingsScreen: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Credits */}
+        {/* Credits & Version */}
         <motion.div variants={itemVariants}>
           <Card variant="gold">
             <CardContent className="text-center py-6">
@@ -220,9 +224,29 @@ export const SettingsScreen: React.FC = () => {
               <p className="text-roman-marble-400 text-sm mb-4">
                 A Roman Gladiator Management Simulation
               </p>
-              <p className="text-roman-marble-500 text-xs">
-                Version 1.0.0
-              </p>
+              <div className="flex items-center justify-center gap-3 text-sm">
+                <span className="text-roman-marble-500">
+                  Version {APP_VERSION}
+                </span>
+                <span className="text-roman-marble-600">•</span>
+                <a
+                  href={`${REPO_URL}/blob/main/CHANGELOG.md`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-roman-gold-500 hover:text-roman-gold-400 underline underline-offset-2 transition-colors"
+                >
+                  Changelog
+                </a>
+                <span className="text-roman-marble-600">•</span>
+                <a
+                  href={REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-roman-gold-500 hover:text-roman-gold-400 underline underline-offset-2 transition-colors"
+                >
+                  GitHub
+                </a>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
