@@ -15,21 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-02-04
+
+Quest system fix for proper progress initialization.
+
+### Fixed
+- **Quest Progress Initialization**: Fixed a timing issue where existing progress wasn't being applied when accepting quests. Initial progress is now calculated and applied atomically in a single Redux action, ensuring:
+  - Fame objectives (`gain_fame`) correctly start with your current ludus fame
+  - Building objectives (`build`) properly recognize already constructed buildings
+  - Gladiator objectives (`recruit_gladiator`) accurately count existing roster members
+  - Faction favor objectives (`reach_favor`) start with current favor levels
+  - Staff objectives (`hire_staff`) correctly recognize already hired staff
+
+### Technical
+- Modified `startQuest` reducer to accept `initialProgress` values for each objective
+- Removed separate `updateObjective` dispatches that were racing with state updates
+
+---
+
 ## [1.0.2] - 2026-02-04
 
 Quest system improvements for better progress tracking.
 
-### Fixed
-- **Quest Progress Initialization**: When accepting a quest, existing progress is now properly recognized:
-  - Fame objectives (`gain_fame`) now start with your current ludus fame
-  - Building objectives (`build`) recognize already constructed buildings
-  - Gladiator objectives (`recruit_gladiator`) count existing roster members
-  - Faction favor objectives (`reach_favor`) start with current favor levels
-  - Staff objectives (`hire_staff`) recognize already hired staff
-
-### Improved
-- Quest acceptance flow now provides immediate feedback on pre-existing progress
-- Players no longer need to re-earn progress for conditions already met before accepting a quest
+### Added
+- **Quest Progress Initialization**: When accepting a quest, existing progress is now recognized for cumulative objectives (fame, buildings, gladiators, faction favor, staff)
 
 ---
 
@@ -119,6 +128,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.3 | 2026-02-04 | Fixed quest progress initialization timing issue |
 | 1.0.2 | 2026-02-04 | Quest progress initialization recognizes existing game state |
 | 1.0.1 | 2026-02-04 | Bug fixes, training/nutrition systems, balance improvements |
 | 1.0.0 | 2026-02-04 | Initial public release with full game systems |

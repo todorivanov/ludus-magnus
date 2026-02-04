@@ -21,6 +21,7 @@ import {
   calculateQuestProgress,
   type Quest,
   type QuestDialogue,
+  type QuestObjective,
 } from '@data/quests';
 import { clsx } from 'clsx';
 
@@ -118,61 +119,54 @@ export const QuestsScreen: React.FC = () => {
     });
   };
 
+  // Calculate initial progress for an objective based on current game state
+  const calculateInitialProgress = (objective: Omit<QuestObjective, 'current' | 'completed'>): number => {
+    switch (objective.type) {
+      case 'gain_fame':
+        // Fame objectives check current fame level
+        return ludusFame;
+      case 'build':
+        // Check if the target building exists
+        if (objective.target) {
+          const hasBuilding = buildings.some(b => b.type === objective.target && !b.isUnderConstruction);
+          return hasBuilding ? 1 : 0;
+        }
+        return 0;
+      case 'recruit_gladiator':
+        // Count current gladiators
+        return roster.length;
+      case 'reach_favor':
+        // Check faction favor level
+        if (objective.target) {
+          return factionFavors[objective.target as keyof typeof factionFavors] || 0;
+        }
+        return 0;
+      case 'hire_staff':
+        // Check if staff of target type exists
+        if (objective.target) {
+          const hasStaff = employees.some(e => e.role === objective.target);
+          return hasStaff ? 1 : 0;
+        }
+        return 0;
+      // win_matches, train, earn_gold, custom - start at 0 as they track NEW actions
+      default:
+        return 0;
+    }
+  };
+
   const handleAcceptQuest = (quest: Quest) => {
+    // Calculate initial progress for all objectives at quest start
+    const objectivesWithProgress = quest.objectives.map(o => ({
+      id: o.id,
+      required: o.required,
+      initialProgress: calculateInitialProgress(o),
+    }));
+
     dispatch(startQuest({
       questId: quest.id,
       startDay: currentDay,
-      objectives: quest.objectives.map(o => ({ id: o.id, required: o.required })),
+      objectives: objectivesWithProgress,
     }));
-
-    // Update objectives with current progress based on objective type
-    quest.objectives.forEach(objective => {
-      let currentProgress = 0;
-      
-      switch (objective.type) {
-        case 'gain_fame':
-          // Fame objectives check current fame level
-          currentProgress = ludusFame;
-          break;
-        case 'build':
-          // Check if the target building exists
-          if (objective.target) {
-            const hasBuilding = buildings.some(b => b.type === objective.target && !b.isUnderConstruction);
-            currentProgress = hasBuilding ? 1 : 0;
-          }
-          break;
-        case 'recruit_gladiator':
-          // Count current gladiators
-          currentProgress = roster.length;
-          break;
-        case 'reach_favor':
-          // Check faction favor level
-          if (objective.target) {
-            currentProgress = factionFavors[objective.target as keyof typeof factionFavors] || 0;
-          }
-          break;
-        case 'hire_staff':
-          // Check if staff of target type exists
-          if (objective.target) {
-            const hasStaff = employees.some(e => e.role === objective.target);
-            currentProgress = hasStaff ? 1 : 0;
-          }
-          break;
-        // win_matches, train, earn_gold, custom - start at 0 as they track NEW actions
-        default:
-          currentProgress = 0;
-      }
-      
-      // Update objective if there's existing progress
-      if (currentProgress > 0) {
-        dispatch(updateObjective({
-          questId: quest.id,
-          objectiveId: objective.id,
-          progress: currentProgress,
-          required: objective.required,
-        }));
-      }
-    });
 
     // Show intro dialogue if available
     if (quest.introDialogue && quest.introDialogue.length > 0) {

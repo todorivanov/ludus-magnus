@@ -63,7 +63,7 @@ const questsSlice = createSlice({
     startQuest: (state, action: PayloadAction<{
       questId: string;
       startDay: number;
-      objectives: { id: string; required: number }[];
+      objectives: { id: string; required: number; initialProgress?: number }[];
     }>) => {
       // Don't add if already active
       if (state.activeQuests.some(q => q.questId === action.payload.questId)) {
@@ -73,11 +73,14 @@ const questsSlice = createSlice({
       state.activeQuests.push({
         questId: action.payload.questId,
         startDay: action.payload.startDay,
-        objectives: action.payload.objectives.map(o => ({
-          id: o.id,
-          current: 0,
-          completed: false,
-        })),
+        objectives: action.payload.objectives.map(o => {
+          const progress = Math.min(o.initialProgress || 0, o.required);
+          return {
+            id: o.id,
+            current: progress,
+            completed: progress >= o.required,
+          };
+        }),
         dialogueIndex: 0,
         selectedChoices: {},
       });
