@@ -189,6 +189,11 @@ const questsSlice = createSlice({
     
     // Tick cooldowns (called daily)
     tickCooldowns: (state) => {
+      // Ensure questCooldowns exists (for backward compatibility with persisted state)
+      if (!state.questCooldowns) {
+        state.questCooldowns = {};
+        return;
+      }
       Object.keys(state.questCooldowns).forEach(questId => {
         if (state.questCooldowns[questId] > 0) {
           state.questCooldowns[questId]--;

@@ -83,6 +83,11 @@ const factionsSlice = createSlice({
       state.actionCooldowns[action.payload.actionId] = action.payload.days;
     },
     tickCooldowns: (state) => {
+      // Ensure actionCooldowns exists (for backward compatibility with persisted state)
+      if (!state.actionCooldowns) {
+        state.actionCooldowns = {};
+        return;
+      }
       Object.keys(state.actionCooldowns).forEach(actionId => {
         if (state.actionCooldowns[actionId] > 0) {
           state.actionCooldowns[actionId]--;
