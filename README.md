@@ -209,9 +209,9 @@ The game features a cohesive Roman-themed design with:
 ### Economy
 | Difficulty | Starting Gold | Expense Modifier |
 |------------|---------------|------------------|
-| Easy       | 500g          | 0.8x             |
-| Normal     | 300g          | 1.0x             |
-| Hard       | 150g          | 1.2x             |
+| Easy       | 750g          | 0.8x             |
+| Normal     | 500g          | 1.0x             |
+| Hard       | 300g          | 1.2x             |
 
 ### Combat
 - Base hit chance: 70%

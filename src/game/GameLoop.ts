@@ -4,6 +4,15 @@
  */
 
 import type { Gladiator, Staff } from '@/types';
+import { 
+  TRAINING_REGIMENS, 
+  NUTRITION_OPTIONS, 
+  calculateXPGain, 
+  calculateStatGains,
+  checkTrainingInjury,
+  type TrainingType,
+  type NutritionQuality,
+} from '@data/training';
 
 // Time phases in a day
 export type TimePhase = 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night';
@@ -149,46 +158,140 @@ export const processGladiatorDay = (
   const events: string[] = [];
   const updates: Partial<Gladiator> = {};
   
-  // Natural HP recovery
+  // Get nutrition level (default to standard)
+  const nutritionLevel = (gladiator.nutrition || 'standard') as NutritionQuality;
+  const nutrition = NUTRITION_OPTIONS[nutritionLevel];
+  
+  // Natural HP recovery with nutrition modifier
   if (gladiator.currentHP < gladiator.maxHP) {
     const baseRecovery = 5;
     const restBonus = isResting ? 10 : 0;
-    const recovery = Math.min(baseRecovery + restBonus, gladiator.maxHP - gladiator.currentHP);
-    updates.currentHP = gladiator.currentHP + recovery;
-    events.push(`Recovered ${recovery} HP`);
-  }
-  
-  // Stamina recovery
-  if (gladiator.currentStamina < gladiator.maxStamina) {
-    const staminaRecovery = isResting ? 30 : 15;
-    updates.currentStamina = Math.min(
-      gladiator.currentStamina + staminaRecovery,
-      gladiator.maxStamina
+    const nutritionBonus = nutrition.effects.healingModifier / 100;
+    const recovery = Math.min(
+      Math.round((baseRecovery + restBonus) * (1 + nutritionBonus)), 
+      gladiator.maxHP - gladiator.currentHP
     );
-    events.push(`Recovered ${staminaRecovery} stamina`);
+    if (recovery > 0) {
+      updates.currentHP = gladiator.currentHP + recovery;
+      events.push(`Recovered ${recovery} HP`);
+    }
   }
   
-  // Training effects
-  if (isTraining && !isResting) {
-    // Fatigue increases
+  // Stamina recovery with nutrition effect
+  if (gladiator.currentStamina < gladiator.maxStamina) {
+    const baseStaminaRecovery = isResting ? 30 : 15;
+    const staminaRecovery = Math.min(
+      baseStaminaRecovery,
+      gladiator.maxStamina - gladiator.currentStamina
+    );
+    if (staminaRecovery > 0) {
+      updates.currentStamina = gladiator.currentStamina + staminaRecovery;
+      events.push(`Recovered ${staminaRecovery} stamina`);
+    }
+  }
+  
+  // Training effects - use actual training regimen
+  if (isTraining && !isResting && gladiator.trainingRegimen) {
+    const trainingType = gladiator.trainingRegimen as TrainingType;
+    const regimen = TRAINING_REGIMENS[trainingType];
+    
+    if (regimen) {
+      // Calculate and apply XP gain
+      const xpGain = calculateXPGain(
+        trainingType,
+        gladiator.level,
+        nutritionLevel,
+        gladiator.morale || 1,
+        (gladiator.fatigue || 0) * 100 // Convert to percentage
+      );
+      
+      if (xpGain > 0) {
+        updates.experience = (gladiator.experience || 0) + xpGain;
+        events.push(`+${xpGain} XP from ${regimen.name}`);
+      }
+      
+      // Calculate stat gains
+      const statGains = calculateStatGains(
+        trainingType,
+        nutritionLevel,
+        gladiator.morale || 1,
+        (gladiator.fatigue || 0) * 100
+      );
+      
+      statGains.forEach(gain => {
+        if (gain.value > 0) {
+          const statKey = gain.stat as keyof Gladiator;
+          const currentValue = (gladiator[statKey] as number) || 0;
+          (updates as Record<string, number>)[statKey] = currentValue + gain.value;
+          events.push(`+${gain.value} ${gain.stat}`);
+        }
+      });
+      
+      // Apply fatigue from training
+      const newFatigue = Math.min(1, (gladiator.fatigue || 0) + regimen.fatigueGain / 100);
+      updates.fatigue = newFatigue;
+      
+      // Apply morale effect from training
+      const moraleChange = regimen.moraleEffect / 100;
+      const nutritionMoraleBonus = nutrition.effects.moraleModifier / 100;
+      const newMorale = Math.max(0.5, Math.min(1.5, (gladiator.morale || 1) + moraleChange + nutritionMoraleBonus));
+      updates.morale = newMorale;
+      
+      // Check for training injury
+      const injuryCheck = checkTrainingInjury(
+        trainingType,
+        nutritionLevel,
+        (gladiator.fatigue || 0) * 100
+      );
+      
+      if (injuryCheck.injured) {
+        // Map severity to match our type (minor, major, permanent)
+        const severityMap: Record<string, 'minor' | 'major' | 'permanent'> = {
+          'minor': 'minor',
+          'moderate': 'major',
+          'severe': 'permanent',
+        };
+        const mappedSeverity = severityMap[injuryCheck.severity] || 'minor';
+        const injuryDays = mappedSeverity === 'minor' ? 3 : mappedSeverity === 'major' ? 7 : 14;
+        
+        const newInjury = {
+          id: `injury_${Date.now()}`,
+          type: `Training ${mappedSeverity} injury`,
+          severity: mappedSeverity,
+          statPenalty: {},
+          recoveryDays: injuryDays,
+          daysRemaining: injuryDays,
+        };
+        updates.injuries = [...(gladiator.injuries || []), newInjury];
+        updates.isInjured = true;
+        events.push(`Suffered ${mappedSeverity} injury during training!`);
+      }
+      
+      events.push(`Completed ${regimen.name} training`);
+    }
+  } else if (isTraining && !isResting) {
+    // Generic training without specific regimen
     const newFatigue = Math.min(1, (gladiator.fatigue || 0) + 0.1);
     updates.fatigue = newFatigue;
     
-    // Morale decreases slightly from hard training
     const newMorale = Math.max(0.5, (gladiator.morale || 1) - 0.02);
     updates.morale = newMorale;
     
-    events.push('Training increased fatigue');
+    events.push('Basic training completed');
   }
   
-  // Resting effects
+  // Resting effects with nutrition bonus
   if (isResting) {
-    // Fatigue decreases
-    const newFatigue = Math.max(0, (gladiator.fatigue || 0) - 0.2);
+    // Fatigue decreases - better nutrition = faster recovery
+    const baseFatigueRecovery = 0.2;
+    const nutritionFatigueBonus = nutrition.effects.fatigueRecovery / 100;
+    const newFatigue = Math.max(0, (gladiator.fatigue || 0) - baseFatigueRecovery - nutritionFatigueBonus);
     updates.fatigue = newFatigue;
     
-    // Morale increases
-    const newMorale = Math.min(1.5, (gladiator.morale || 1) + 0.05);
+    // Morale increases with nutrition bonus
+    const baseMoraleGain = 0.05;
+    const nutritionMoraleBonus = nutrition.effects.moraleModifier / 200; // Half effect for resting
+    const newMorale = Math.min(1.5, (gladiator.morale || 1) + baseMoraleGain + nutritionMoraleBonus);
     updates.morale = newMorale;
     
     events.push('Rest reduced fatigue and improved morale');

@@ -8,7 +8,8 @@ import {
   hideDayReport,
   setUnrestLevel,
 } from '@features/game/gameSlice';
-import { addGold, spendGold } from '@features/player/playerSlice';
+import { addGold, spendGold, consumeResource } from '@features/player/playerSlice';
+import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
 import { tickCooldowns as tickQuestCooldowns } from '@features/quests/questsSlice';
 import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
 import { 
@@ -37,10 +38,12 @@ export const DashboardScreen: React.FC = () => {
   
   const playerState = useAppSelector(state => state.player);
   const gold = playerState?.gold || 0;
-  const ludusFame = playerState?.ludusFame || 0;
   const resources = playerState?.resources || { grain: 0, water: 0, wine: 0 };
   const ludusName = playerState?.ludusName || 'Ludus';
   const name = playerState?.name || 'Lanista';
+  
+  const fameState = useAppSelector(state => state.fame);
+  const ludusFame = fameState?.ludusFame || 0;
   
   const gladiatorsState = useAppSelector(state => state.gladiators);
   const roster = gladiatorsState?.roster || [];
@@ -107,6 +110,48 @@ export const DashboardScreen: React.FC = () => {
         severity: 'danger',
         message: 'Insufficient gold for daily expenses! Staff morale may suffer.',
       });
+    }
+
+    // Calculate and consume resources for gladiators based on nutrition
+    let totalGrainConsumed = 0;
+    let totalWaterConsumed = 0;
+    let totalWineConsumed = 0;
+    
+    roster.forEach(gladiator => {
+      const nutritionLevel = (gladiator.nutrition || 'standard') as NutritionQuality;
+      const nutrition = NUTRITION_OPTIONS[nutritionLevel];
+      
+      totalGrainConsumed += nutrition.dailyCost.grain;
+      totalWaterConsumed += nutrition.dailyCost.water;
+      totalWineConsumed += nutrition.dailyCost.wine || 0;
+    });
+    
+    // Check if we have enough resources
+    if (resources.grain < totalGrainConsumed) {
+      alerts.push({
+        severity: 'warning',
+        message: `Not enough grain! Need ${totalGrainConsumed}, have ${resources.grain}. Gladiators will suffer.`,
+      });
+    }
+    if (resources.water < totalWaterConsumed) {
+      alerts.push({
+        severity: 'warning',
+        message: `Not enough water! Need ${totalWaterConsumed}, have ${resources.water}. Gladiators will suffer.`,
+      });
+    }
+    
+    // Consume resources
+    if (totalGrainConsumed > 0) {
+      dispatch(consumeResource({ resource: 'grain', amount: totalGrainConsumed }));
+      events.push(`Consumed ${totalGrainConsumed} grain`);
+    }
+    if (totalWaterConsumed > 0) {
+      dispatch(consumeResource({ resource: 'water', amount: totalWaterConsumed }));
+      events.push(`Consumed ${totalWaterConsumed} water`);
+    }
+    if (totalWineConsumed > 0) {
+      dispatch(consumeResource({ resource: 'wine', amount: totalWineConsumed }));
+      events.push(`Consumed ${totalWineConsumed} wine`);
     }
 
     // Process gladiator recovery
@@ -213,7 +258,7 @@ export const DashboardScreen: React.FC = () => {
     // Advance day
     dispatch(advanceDay());
     setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings]);
+  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources]);
 
   // Get phase icon
   const getPhaseIcon = (phase: string) => {

@@ -21,9 +21,9 @@ export const NewGameScreen: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
   const difficulties: { id: Difficulty; label: string; description: string; gold: number }[] = [
-    { id: 'easy', label: 'Novice', description: 'For those new to the arena', gold: 500 },
-    { id: 'normal', label: 'Gladiator', description: 'The true Roman experience', gold: 300 },
-    { id: 'hard', label: 'Champion', description: 'Only the worthy survive', gold: 150 },
+    { id: 'easy', label: 'Novice', description: 'For those new to the arena', gold: 1500 },
+    { id: 'normal', label: 'Gladiator', description: 'The true Roman experience', gold: 1250 },
+    { id: 'hard', label: 'Champion', description: 'Only the worthy survive', gold: 1000 },
   ];
 
   const handleStartGame = () => {

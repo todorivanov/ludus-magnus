@@ -33,7 +33,9 @@ const FloatingParticle: React.FC<{ delay: number }> = ({ delay }) => {
 
 export const TitleScreen: React.FC = () => {
   const dispatch = useAppDispatch();
-  const hasSaveData = useAppSelector(state => state.player?.name !== '');
+  // Check if there's actual save data (player has a name set)
+  const playerName = useAppSelector(state => state.player?.name);
+  const hasSaveData = Boolean(playerName && playerName.trim().length > 0);
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
@@ -185,7 +187,7 @@ export const TitleScreen: React.FC = () => {
             {/* Menu buttons */}
             <motion.div
               variants={itemVariants}
-              className="space-y-3 sm:space-y-4"
+              className="space-y-3 sm:space-y-4 flex flex-col items-center"
             >
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -217,19 +219,21 @@ export const TitleScreen: React.FC = () => {
                 </motion.div>
               )}
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => dispatch(setScreen('settings'))}
-                  className="w-56 sm:w-64"
+              {hasSaveData && (
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  Settings
-                </Button>
-              </motion.div>
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={() => dispatch(setScreen('settings'))}
+                    className="w-56 sm:w-64"
+                  >
+                    Settings
+                  </Button>
+                </motion.div>
+              )}
             </motion.div>
 
             {/* Version & Credits */}

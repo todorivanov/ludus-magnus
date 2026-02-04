@@ -15,6 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-02-04
+
+Bug fixes and balance improvements for the initial release.
+
+### Fixed
+- **Gladiator Recovery**: Rest and recovery now properly updates gladiator HP, stamina, fatigue, and morale
+- **Quest Progress**: Purchasing gladiators now correctly updates quest objectives (recruit_gladiator type)
+- **Quest Progress**: Winning arena battles now correctly updates quest objectives (win_matches type)
+- **Fame Tracking**: Fame changes now properly update quest objectives (gain_fame type)
+- **Fame Display**: Ludus fame now correctly displays on the dashboard (was reading from wrong Redux slice)
+- **Building Construction**: Building construction and upgrades now properly progress when ending the day
+- **Training System**: Training regimens now properly apply XP gains, stat improvements, and fatigue
+- **Nutrition System**: Nutrition quality now affects healing, training effectiveness, morale, and injury resistance
+- **Resource Consumption**: Daily resource consumption (grain, water, wine) based on gladiator nutrition levels
+- **Game Reset**: Reset game now properly clears all saved data from localStorage
+
+### Changed
+- **Starting Gold**: Increased starting gold for all difficulty levels for a smoother early game:
+  - Easy: 500g → 750g
+  - Normal: 300g → 500g
+  - Hard: 150g → 300g
+
+### Improved
+- **Title Screen**: Settings button now only visible when there's a saved game
+- **Save Detection**: More robust check for detecting existing save data
+
+---
+
 ## [1.0.0] - 2026-02-04
 
 This is the first public release of **Ludus Magnus: Reborn**, a complete Roman gladiator ludus management simulation.
@@ -73,6 +101,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.1 | 2026-02-04 | Bug fixes, training/nutrition systems, balance improvements |
 | 1.0.0 | 2026-02-04 | Initial public release with full game systems |
 
 ---

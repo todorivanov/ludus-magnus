@@ -7,7 +7,6 @@ import {
   toggleAutosave, 
   toggleSound, 
   toggleMusic,
-  resetGame 
 } from '@features/game/gameSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, Modal, Divider } from '@components/ui';
 import type { Difficulty } from '@/types';
@@ -42,8 +41,19 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleReset = () => {
-    dispatch(resetGame());
     setShowResetConfirm(false);
+    
+    // Clear all game-related localStorage keys
+    const keysToRemove = Object.keys(localStorage).filter(key => 
+      key.startsWith('persist:') || key.includes('ludus')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Also try the specific key
+    localStorage.removeItem('persist:ludus-magnus-reborn');
+    
+    // Force reload to get fresh state
+    window.location.href = window.location.origin + window.location.pathname;
   };
 
   const containerVariants = {

@@ -5,10 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 // Starting gold based on difficulty
 const getStartingGold = (difficulty: Difficulty): number => {
   switch (difficulty) {
-    case 'easy': return 500;
-    case 'normal': return 300;
-    case 'hard': return 150;
-    default: return 300;
+    case 'easy': return 1500;
+    case 'normal': return 1250;
+    case 'hard': return 1000;
+    default: return 1000;
   }
 };
 
@@ -24,7 +24,7 @@ const initialResources: Resources = {
 const initialState: PlayerState = {
   name: '',
   ludusName: '',
-  gold: 300,
+  gold: 500,
   ludusFame: 0,
   resources: initialResources,
   transactions: [],
