@@ -10,8 +10,9 @@ import {
 } from '@features/game/gameSlice';
 import { addGold, spendGold, consumeResource } from '@features/player/playerSlice';
 import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
-import { tickCooldowns as tickQuestCooldowns } from '@features/quests/questsSlice';
+import { tickCooldowns as tickQuestCooldowns, incrementObjective } from '@features/quests/questsSlice';
 import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
+import { getQuestById } from '@data/quests';
 import { 
   updateConstructionProgress, 
   completeConstruction,
@@ -54,6 +55,9 @@ export const DashboardScreen: React.FC = () => {
   const staffState = useAppSelector(state => state.staff);
   const employees = staffState?.employees || [];
   const totalDailyWages = staffState?.totalDailyWages || 0;
+  
+  const questsState = useAppSelector(state => state.quests);
+  const activeQuests = questsState?.activeQuests || [];
 
   const [processingDay, setProcessingDay] = useState(false);
 
@@ -224,6 +228,24 @@ export const DashboardScreen: React.FC = () => {
         if (newDays <= 0) {
           dispatch(completeConstruction(building.id));
           events.push(`Construction complete: ${building.type}`);
+          
+          // Update quest objectives for building completion
+          activeQuests.forEach(activeQuest => {
+            const questDef = getQuestById(activeQuest.questId);
+            if (!questDef) return;
+            
+            questDef.objectives.forEach(objective => {
+              // Check if this objective is for building this specific type
+              if (objective.type === 'build' && objective.target === building.type) {
+                dispatch(incrementObjective({
+                  questId: activeQuest.questId,
+                  objectiveId: objective.id,
+                  amount: 1,
+                  required: objective.required,
+                }));
+              }
+            });
+          });
         } else {
           dispatch(updateConstructionProgress({ id: building.id, daysRemaining: newDays }));
         }
@@ -258,7 +280,7 @@ export const DashboardScreen: React.FC = () => {
     // Advance day
     dispatch(advanceDay());
     setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources]);
+  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests]);
 
   // Get phase icon
   const getPhaseIcon = (phase: string) => {

@@ -19,6 +19,7 @@ import {
   getQuestById,
   getAvailableQuests,
   calculateQuestProgress,
+  DAILY_QUESTS,
   type Quest,
   type QuestDialogue,
   type QuestObjective,
@@ -86,7 +87,8 @@ export const QuestsScreen: React.FC = () => {
       case 'side':
         return availableQuests.filter(q => q.type === 'side' || q.type === 'event');
       case 'daily':
-        return availableQuests.filter(q => q.type === 'daily');
+        // Show all daily quests (available + on cooldown) so users can see when they'll be ready
+        return DAILY_QUESTS;
       case 'completed':
         return completedQuestIds.map(id => getQuestById(id)).filter((q): q is Quest => q !== undefined);
       default:
@@ -411,6 +413,7 @@ export const QuestsScreen: React.FC = () => {
                 quest={quest}
                 isCompleted={activeTab === 'completed'}
                 isActive={activeQuests.some(q => q.questId === quest.id)}
+                cooldownDays={questCooldowns[quest.id]}
                 onSelect={() => {
                   setSelectedQuest(quest);
                   setShowQuestModal(true);
@@ -432,6 +435,7 @@ export const QuestsScreen: React.FC = () => {
               quest={selectedQuest}
               activeData={getActiveQuestData(selectedQuest.id)}
               isCompleted={completedQuestIds.includes(selectedQuest.id)}
+              canAccept={availableQuests.some(q => q.id === selectedQuest.id)}
               onAccept={() => handleAcceptQuest(selectedQuest)}
               onClose={() => setShowQuestModal(false)}
             />
@@ -463,6 +467,7 @@ interface QuestCardProps {
   quest: Quest;
   isCompleted: boolean;
   isActive: boolean;
+  cooldownDays?: number;
   onSelect: () => void;
 }
 
@@ -470,18 +475,23 @@ const QuestCard: React.FC<QuestCardProps> = ({
   quest,
   isCompleted,
   isActive,
+  cooldownDays,
   onSelect,
 }) => {
+  const isOnCooldown = cooldownDays !== undefined && cooldownDays > 0;
+  
   return (
     <div
       onClick={onSelect}
       className={clsx(
         'p-4 rounded-lg border cursor-pointer transition-all',
-        isCompleted
-          ? 'border-health-high bg-health-high/10'
-          : isActive
-            ? 'border-roman-gold-500 bg-roman-gold-500/10'
-            : 'border-roman-marble-600 bg-roman-marble-800 hover:border-roman-marble-500'
+        isOnCooldown
+          ? 'border-roman-marble-700 bg-roman-marble-900 opacity-75'
+          : isCompleted
+            ? 'border-health-high bg-health-high/10'
+            : isActive
+              ? 'border-roman-gold-500 bg-roman-gold-500/10'
+              : 'border-roman-marble-600 bg-roman-marble-800 hover:border-roman-marble-500'
       )}
     >
       <div className="flex items-start gap-3">
@@ -496,6 +506,11 @@ const QuestCard: React.FC<QuestCardProps> = ({
             )}
             {isActive && (
               <span className="text-xs px-2 py-0.5 bg-blue-600 rounded">Active</span>
+            )}
+            {isOnCooldown && (
+              <span className="text-xs px-2 py-0.5 bg-roman-marble-600 rounded">
+                ⏳ {cooldownDays} day{cooldownDays > 1 ? 's' : ''} left
+              </span>
             )}
           </div>
           <p className="text-sm text-roman-marble-400 mt-1 line-clamp-2">
@@ -591,6 +606,7 @@ interface QuestDetailViewProps {
   quest: Quest;
   activeData?: { objectives: { id: string; current: number; completed: boolean }[] };
   isCompleted: boolean;
+  canAccept: boolean; // true if quest can be accepted (not on cooldown, available)
   onAccept: () => void;
   onClose: () => void;
 }
@@ -599,6 +615,7 @@ const QuestDetailView: React.FC<QuestDetailViewProps> = ({
   quest,
   activeData,
   isCompleted,
+  canAccept,
   onAccept,
   onClose,
 }) => {
@@ -671,9 +688,9 @@ const QuestDetailView: React.FC<QuestDetailViewProps> = ({
         <Button variant="ghost" className="flex-1" onClick={onClose}>
           Close
         </Button>
-        {!isActive && !isCompleted && (
+        {!isActive && canAccept && (
           <Button variant="gold" className="flex-1" onClick={onAccept}>
-            Accept Quest
+            {isCompleted && quest.repeatable ? 'Accept Again' : 'Accept Quest'}
           </Button>
         )}
       </div>

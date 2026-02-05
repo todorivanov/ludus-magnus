@@ -6,6 +6,7 @@ import {
   setNutrition,
   learnSkill,
 } from '@features/gladiators/gladiatorsSlice';
+import { incrementObjective } from '@features/quests/questsSlice';
 import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar } from '@components/ui';
 import { 
@@ -22,6 +23,7 @@ import {
   canLearnSkill,
 } from '@data/skillTrees';
 import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
+import { getQuestById } from '@data/quests';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
 
@@ -32,6 +34,8 @@ export const TrainingScreen: React.FC = () => {
   const { roster } = useAppSelector(state => state.gladiators);
   const { buildings } = useAppSelector(state => state.ludus);
   const { resources } = useAppSelector(state => state.player);
+  const questsState = useAppSelector(state => state.quests);
+  const activeQuests = questsState?.activeQuests || [];
 
   const [selectedGladiatorId, setSelectedGladiatorId] = useState<string | null>(
     roster.length > 0 ? roster[0].id : null
@@ -44,6 +48,26 @@ export const TrainingScreen: React.FC = () => {
   // Handle training selection
   const handleSetTraining = (gladiatorId: string, trainingType: TrainingType | null) => {
     dispatch(setTrainingRegimen({ gladiatorId, trainingType }));
+    
+    // Update quest objectives for training if a training type is selected (not null/stopping)
+    if (trainingType) {
+      activeQuests.forEach(activeQuest => {
+        const questDef = getQuestById(activeQuest.questId);
+        if (!questDef) return;
+        
+        questDef.objectives.forEach(objective => {
+          if (objective.type === 'train') {
+            // For 'train' objectives, increment by 1 when assigning training
+            dispatch(incrementObjective({
+              questId: activeQuest.questId,
+              objectiveId: objective.id,
+              amount: 1,
+              required: objective.required,
+            }));
+          }
+        });
+      });
+    }
   };
 
   // Handle nutrition selection

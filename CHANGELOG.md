@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-02-04
+
+Building completion now updates quest objectives., daily quests now properly repeat after cooldown expires, Training system now properly updates quest objectives.
+
+### Fixed
+- **Repeatable Quests**: Fixed bug where the "Accept Quest" button was hidden for completed repeatable quests, preventing players from accepting them again
+- **Daily Quest Visibility**: Daily quests now always show in the Daily tab, even when on cooldown
+- **Building Quest Tracking**: Completing construction of a building now properly updates quest objectives with `type: 'build'` (e.g., "Build a training facility" in Building a Reputation quest)
+- **Training Quest Tracking**: Assigning a training regimen to a gladiator now correctly updates quest objectives with `type: 'train'` (e.g., "Daily Training" quest)
+
+### Added
+- **Cooldown Indicator**: Daily quests on cooldown now display remaining days (e.g., "⏳ 1 day left")
+- **Accept Again Button**: Repeatable quests show "Accept Again" button instead of "Accept Quest" when re-accepting
+
+---
+
 ## [1.0.3] - 2026-02-04
 
 Quest system fix for proper progress initialization.
@@ -128,6 +144,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.4 | 2026-02-04 | Fixed tracking of quest objectives |
 | 1.0.3 | 2026-02-04 | Fixed quest progress initialization timing issue |
 | 1.0.2 | 2026-02-04 | Quest progress initialization recognizes existing game state |
 | 1.0.1 | 2026-02-04 | Bug fixes, training/nutrition systems, balance improvements |
