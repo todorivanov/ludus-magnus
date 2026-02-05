@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { 
   startConstruction, 
   startUpgrade,
+  calculateSecurityRating,
 } from '@features/ludus/ludusSlice';
 import { spendGold, consumeResource } from '@features/player/playerSlice';
 import { MainLayout } from '@components/layout';
@@ -27,6 +28,21 @@ export const LudusScreen: React.FC = () => {
   const [selectedBuildingType, setSelectedBuildingType] = useState<BuildingType | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
+
+  // Calculate security rating when component mounts or employees/buildings change
+  useEffect(() => {
+    const guards = employees.filter(e => e.role === 'guard');
+    const guardCount = guards.length;
+    let guardSkillBonus = 0;
+    guards.forEach(guard => {
+      if (guard.skills.includes('guard_vigilant')) guardSkillBonus += 5;
+      if (guard.skills.includes('guard_intimidating')) guardSkillBonus += 5;
+      if (guard.skills.includes('guard_elite')) guardSkillBonus += 10;
+      // Level bonus: +2 security per guard level
+      guardSkillBonus += (guard.level - 1) * 2;
+    });
+    dispatch(calculateSecurityRating({ guardCount, guardSkillBonus }));
+  }, [dispatch, employees, buildings]);
 
   // Get buildings not yet constructed
   const constructedTypes = buildings.map(b => b.type);

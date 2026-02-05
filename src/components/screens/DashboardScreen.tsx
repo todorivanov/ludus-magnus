@@ -20,8 +20,10 @@ import {
   completeConstruction,
   updateUpgradeProgress,
   completeUpgrade,
+  calculateSecurityRating,
 } from '@features/ludus/ludusSlice';
 import { updateGladiator } from '@features/gladiators/gladiatorsSlice';
+import { addExperience as addStaffExperience } from '@features/staff/staffSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
 import { MainLayout } from '@components/layout';
 import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
@@ -323,6 +325,78 @@ export const DashboardScreen: React.FC = () => {
         }
       }
     });
+
+    // Process staff experience gain
+    employees.forEach(staff => {
+      let xpGain = 5; // Base XP for working a day
+      
+      // Role-specific XP bonuses based on StaffRole type
+      switch (staff.role) {
+        case 'doctore':
+          // Doctore (trainer) gains extra XP when gladiators train
+          const trainingGladiators = roster.filter(g => g.isTraining).length;
+          xpGain += trainingGladiators * 3;
+          if (trainingGladiators > 0) {
+            events.push(`${staff.name} trained ${trainingGladiators} gladiator(s)`);
+          }
+          break;
+        case 'medicus':
+          // Medicus (physician) gains XP when healing injured gladiators
+          const injuredGladiators = roster.filter(g => g.isInjured || g.currentHP < g.maxHP).length;
+          xpGain += injuredGladiators * 3;
+          if (injuredGladiators > 0) {
+            events.push(`${staff.name} treated ${injuredGladiators} gladiator(s)`);
+          }
+          break;
+        case 'coquus':
+          // Coquus (cook) gains XP based on number of gladiators fed
+          xpGain += roster.length * 2;
+          break;
+        case 'guard':
+          // Guard gains XP for maintaining security
+          xpGain += Math.floor(roster.length / 2) + 2;
+          break;
+        case 'lanista':
+          // Lanista (manager) gains XP based on gold transactions
+          xpGain += Math.min(10, Math.floor((totalIncome + totalExpenses) / 50));
+          break;
+        case 'lorarius':
+          // Lorarius (disciplinarian) gains XP for keeping order
+          xpGain += Math.floor(roster.length / 2) + 3;
+          break;
+        case 'faber':
+          // Faber (craftsman) gains XP from building maintenance
+          const activeBuildings = buildings.filter(b => !b.isUnderConstruction).length;
+          xpGain += activeBuildings * 2;
+          break;
+      }
+      
+      // Check for level up before applying XP (to detect if level up will happen)
+      const currentXP = staff.experience;
+      const xpToLevel = staff.level * 50;
+      const willLevelUp = (currentXP + xpGain) >= xpToLevel && staff.level < 5;
+      
+      // Apply XP gain (auto level-up happens in the reducer)
+      dispatch(addStaffExperience({ id: staff.id, amount: xpGain }));
+      
+      if (willLevelUp) {
+        events.push(`🎉 ${staff.name} leveled up to Level ${staff.level + 1}!`);
+      }
+    });
+
+    // Calculate security rating (guards + buildings)
+    const guards = employees.filter(e => e.role === 'guard');
+    const guardCount = guards.length;
+    // Calculate bonus from guard skills (vigilant +5, intimidating +5, elite +10)
+    let guardSkillBonus = 0;
+    guards.forEach(guard => {
+      if (guard.skills.includes('guard_vigilant')) guardSkillBonus += 5;
+      if (guard.skills.includes('guard_intimidating')) guardSkillBonus += 5;
+      if (guard.skills.includes('guard_elite')) guardSkillBonus += 10;
+      // Level bonus: +2 security per guard level
+      guardSkillBonus += (guard.level - 1) * 2;
+    });
+    dispatch(calculateSecurityRating({ guardCount, guardSkillBonus }));
 
     // Tick cooldowns and update time-based systems
     dispatch(tickQuestCooldowns());

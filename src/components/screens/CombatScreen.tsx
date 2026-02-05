@@ -12,6 +12,7 @@ import {
   recordWin, 
   recordLoss,
   addInjury,
+  killGladiator,
 } from '@features/gladiators/gladiatorsSlice';
 import { addGold } from '@features/player/playerSlice';
 import { addLudusFame } from '@features/fame/fameSlice';
@@ -181,17 +182,24 @@ export const CombatScreen: React.FC = () => {
 
       // Check for death in death match
       if (matchData.rules === 'death' && gameState.player.currentHP <= 0) {
-        // Gladiator dies - would need to remove them
-        // For now, just add a severe injury
+        // Gladiator dies - remove from roster and add to fallen
+        dispatch(killGladiator({
+          id: combatState.gladiator.id,
+          deathDay: currentDay,
+          causeOfDeath: `Killed in ${matchData.name}`,
+          killedBy: gameState.opponent.name,
+        }));
+      } else {
+        // Regular defeat - add injury
         dispatch(addInjury({
           id: combatState.gladiator.id,
           injury: {
             id: uuidv4(),
-            type: 'Near-fatal wound',
+            type: 'Combat wound',
             severity: 'major',
-            statPenalty: { strength: -10, agility: -10 },
-            recoveryDays: 30,
-            daysRemaining: 30,
+            statPenalty: { strength: -5, agility: -5 },
+            recoveryDays: 14,
+            daysRemaining: 14,
           },
         }));
       }

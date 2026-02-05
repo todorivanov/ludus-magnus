@@ -15,13 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.5] - 2026-02-05
+## [1.0.6] - 2026-02-05
 
-Training XP calculation fix, Gladiator market refresh system, Automatic level-up system.
+Automatic gladiator level-up, faction favor quest tracking, death match consequences, staff XP system.
+
+### Added
+- **Staff Experience System**: Staff members now gain XP daily based on their work:
+  - Doctore: +3 XP per gladiator training
+  - Medicus: +3 XP per gladiator treated
+  - Coquus: +2 XP per gladiator fed
+  - Guard: XP based on roster size
+  - Lanista: XP based on gold transactions
+  - Lorarius: XP for maintaining discipline
+  - Faber: +2 XP per maintained building
+  - All staff: +5 base XP per day worked
+- **Staff Auto Level-Up**: Staff automatically level up when reaching XP threshold (level × 50)
+- **Gladiator Death System**: Gladiators who lose death matches now actually die and are removed from the roster
+- **Fallen Warriors Memorial**: New "Fallen" tab in the Gladiators screen to honor deceased gladiators
+  - View death details (day, cause, killer)
+  - Review their final combat record and stats
+  - Memorial tribute for each fallen warrior
+- **Death Tracking**: Each death records the day, cause of death, and name of the opponent who killed them
 
 ### Fixed
-- **Training XP Mismatch**: Fixed bug where actual XP gained was much lower than displayed estimate. The morale value was being passed incorrectly (raw 0.1-1.5 instead of converted 0-100 scale), causing calculations to use ~50% effectiveness instead of proper morale bonus
-- **Stat Gains**: Same fix applied to stat gain calculations during training
+- **Staff XP**: Staff members were not gaining any experience - now properly gain XP during daily processing
+- **Guard Security Bonus**: Guards now properly contribute to security rating (+10 per guard, plus skill and level bonuses)
+- **Security Display**: Ludus screen now shows correct security rating immediately when viewing (including guard contributions)
+- **Death Match Consequences**: Losing a death match now results in actual gladiator death instead of just a severe injury
+- **Combat Injuries**: Non-lethal defeats now add appropriate combat wounds (14-day recovery)
 - **Automatic Level-Up**: Fixed bug where gladiators would not level up when reaching the XP threshold (e.g., 108/100 XP). Gladiators now automatically level up when they gain enough experience from:
   - Training regimens (daily XP gains)
   - Combat victories (50 XP base, +25 XP for kills)
@@ -32,7 +53,21 @@ Training XP calculation fix, Gladiator market refresh system, Automatic level-up
   - Increased max stamina (based on level and endurance)
   - Excess XP carries over to the next level
 - **Existing Saves**: Gladiators with excess XP in existing save games will automatically level up when ending the next day
-- **Sponsorship Duration**: Sponsorship days remaining now decrements daily when ending the day (was stuck at initial value) Sponsorships will now properly expire when their duration ends
+- **Faction Favor Quest Tracking**: Fixed `reach_favor` quest objectives not being tracked properly:
+  - Initial progress now correctly uses highest faction favor when no specific faction is targeted
+  - Political actions (gifts, bribes, alliances, etc.) now update quest progress when faction favor changes
+  - Both successful and failed actions properly update quest objectives
+
+---
+
+## [1.0.5] - 2026-02-05
+
+Training XP calculation fix, Gladiator market refresh system, income calculation fixes.
+
+### Fixed
+- **Training XP Mismatch**: Fixed bug where actual XP gained was much lower than displayed estimate. The morale value was being passed incorrectly (raw 0.1-1.5 instead of converted 0-100 scale), causing calculations to use ~50% effectiveness instead of proper morale bonus
+- **Stat Gains**: Same fix applied to stat gain calculations during training
+- **Sponsorship Duration**: Sponsorship days remaining now decrements daily when ending the day (was stuck at initial value). Sponsorships will now properly expire when their duration ends
 - **Merchandise Income**: Purchased merchandise items now correctly add their daily income to the end-of-day gold calculation
 - **Sponsorship Income**: Active sponsorship deals now correctly add their daily payment to the end-of-day gold calculation
 - **Day Report**: The day report now shows separate entries for Fame Income, Merchandise Sales, and Sponsorships
@@ -175,7 +210,8 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.0.5 | 2026-02-05 | Auto level-up, training XP fix, market refresh, sponsorship/merchandise income |
+| 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |
+| 1.0.5 | 2026-02-05 | Training XP fix, market refresh, sponsorship/merchandise income |
 | 1.0.4 | 2026-02-04 | Fixed tracking of quest objectives |
 | 1.0.3 | 2026-02-04 | Fixed quest progress initialization timing issue |
 | 1.0.2 | 2026-02-04 | Quest progress initialization recognizes existing game state |

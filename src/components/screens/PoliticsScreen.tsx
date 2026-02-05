@@ -75,6 +75,31 @@ export const PoliticsScreen: React.FC = () => {
     });
   };
 
+  // Helper to update faction favor objectives in all active quests
+  const updateFavorObjectives = (updatedFavors: typeof factionFavors) => {
+    activeQuests.forEach(activeQuest => {
+      const questData = getQuestById(activeQuest.questId);
+      if (questData) {
+        questData.objectives.forEach(objective => {
+          if (objective.type === 'reach_favor') {
+            // If specific faction targeted, use that faction's favor
+            // Otherwise use the highest favor among all factions
+            const progress = objective.target 
+              ? (updatedFavors[objective.target as keyof typeof updatedFavors] || 0)
+              : Math.max(...Object.values(updatedFavors));
+            
+            dispatch(updateObjective({
+              questId: activeQuest.questId,
+              objectiveId: objective.id,
+              progress,
+              required: objective.required,
+            }));
+          }
+        });
+      }
+    });
+  };
+
   // Handle political action
   const handleExecuteAction = () => {
     if (!selectedAction || !selectedFaction) return;
@@ -101,6 +126,12 @@ export const PoliticsScreen: React.FC = () => {
         amount: selectedAction.favorChange 
       }));
 
+      // Calculate updated favor values for quest tracking
+      const updatedFavors = { ...factionFavors };
+      updatedFavors[selectedFaction] = Math.max(0, Math.min(100, 
+        (updatedFavors[selectedFaction] || 0) + selectedAction.favorChange
+      ));
+
       // Apply rival favor change if applicable
       if (selectedAction.rivalFavorChange) {
         const rivalFaction = FACTIONS[selectedFaction]?.rivalFaction as FactionId;
@@ -109,8 +140,14 @@ export const PoliticsScreen: React.FC = () => {
             faction: rivalFaction, 
             amount: selectedAction.rivalFavorChange 
           }));
+          updatedFavors[rivalFaction] = Math.max(0, Math.min(100, 
+            (updatedFavors[rivalFaction] || 0) + selectedAction.rivalFavorChange
+          ));
         }
       }
+
+      // Update favor objectives in quests
+      updateFavorObjectives(updatedFavors);
 
       // Handle alliance
       if (selectedAction.type === 'alliance') {
@@ -129,6 +166,11 @@ export const PoliticsScreen: React.FC = () => {
         dispatch(addLudusFame({ amount: -10, source: 'Political failure', day: currentDay }));
         // Update fame objectives
         updateFameObjectives(Math.max(0, currentLudusFame - 10));
+        
+        // Update favor objectives for failed action
+        const updatedFavors = { ...factionFavors };
+        updatedFavors[selectedFaction] = Math.max(0, (updatedFavors[selectedFaction] || 0) - 15);
+        updateFavorObjectives(updatedFavors);
       }
 
       setActionResult({

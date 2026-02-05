@@ -1,9 +1,16 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Gladiator } from '@/types';
 
+export interface DeadGladiator extends Gladiator {
+  deathDay: number;
+  causeOfDeath: string;
+  killedBy?: string; // Name of opponent who killed them
+}
+
 interface GladiatorsState {
   roster: Gladiator[];
   marketPool: Gladiator[];
+  deadGladiators: DeadGladiator[];
   selectedGladiatorId: string | null;
   lastMarketRefresh: number; // Day when market was last refreshed
 }
@@ -11,6 +18,7 @@ interface GladiatorsState {
 const initialState: GladiatorsState = {
   roster: [],
   marketPool: [],
+  deadGladiators: [],
   selectedGladiatorId: null,
   lastMarketRefresh: 0,
 };
@@ -25,6 +33,30 @@ const gladiatorsSlice = createSlice({
     },
     removeGladiator: (state, action: PayloadAction<string>) => {
       state.roster = state.roster.filter(g => g.id !== action.payload);
+    },
+    killGladiator: (state, action: PayloadAction<{ 
+      id: string; 
+      deathDay: number; 
+      causeOfDeath: string; 
+      killedBy?: string;
+    }>) => {
+      const index = state.roster.findIndex(g => g.id === action.payload.id);
+      if (index !== -1) {
+        const gladiator = state.roster[index];
+        // Add to dead gladiators with death info
+        state.deadGladiators.push({
+          ...gladiator,
+          deathDay: action.payload.deathDay,
+          causeOfDeath: action.payload.causeOfDeath,
+          killedBy: action.payload.killedBy,
+        });
+        // Remove from roster
+        state.roster.splice(index, 1);
+        // Clear selection if this gladiator was selected
+        if (state.selectedGladiatorId === action.payload.id) {
+          state.selectedGladiatorId = null;
+        }
+      }
     },
     updateGladiator: (state, action: PayloadAction<{ id: string; updates: Partial<Gladiator> }>) => {
       const index = state.roster.findIndex(g => g.id === action.payload.id);
@@ -297,6 +329,7 @@ const gladiatorsSlice = createSlice({
 export const {
   addGladiator,
   removeGladiator,
+  killGladiator,
   updateGladiator,
   selectGladiator,
   setMarketPool,

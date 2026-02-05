@@ -93,11 +93,23 @@ const staffSlice = createSlice({
       const staff = state.employees.find(s => s.id === action.payload.id);
       if (staff) {
         staff.experience += action.payload.amount;
+        
+        // Auto level-up check (XP needed = level * 50)
+        let xpToLevel = staff.level * 50;
+        while (staff.experience >= xpToLevel && staff.level < 5) {
+          staff.experience -= xpToLevel;
+          staff.level += 1;
+          xpToLevel = staff.level * 50; // Update for next check
+        }
       }
     },
     levelUp: (state, action: PayloadAction<{ id: string }>) => {
       const staff = state.employees.find(s => s.id === action.payload.id);
       if (staff && staff.level < 5) {
+        const xpToLevel = staff.level * 50;
+        if (staff.experience >= xpToLevel) {
+          staff.experience -= xpToLevel;
+        }
         staff.level += 1;
       }
     },

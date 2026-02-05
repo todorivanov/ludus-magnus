@@ -80,14 +80,22 @@ const ludusSlice = createSlice({
       }
     },
     
-    // Security
-    calculateSecurityRating: (state) => {
-      // Base security from walls
-      const walls = state.buildings.find(b => b.type === 'walls');
+    // Security - accepts guard count and their skills from staff slice
+    calculateSecurityRating: (state, action: PayloadAction<{ guardCount: number; guardSkillBonus: number }>) => {
       let security = 0;
+      
+      // Base security from walls building
+      const walls = state.buildings.find(b => b.type === 'walls' && !b.isUnderConstruction);
       if (walls) {
-        security = walls.level * 10 + (walls.level === 3 ? 5 : 0);
+        security += walls.level * 10 + (walls.level === 3 ? 5 : 0);
       }
+      
+      // Security from guards (+10 per guard)
+      security += action.payload.guardCount * 10;
+      
+      // Additional security from guard skills and level bonuses
+      security += action.payload.guardSkillBonus;
+      
       state.securityRating = security;
     },
     setSecurityRating: (state, action: PayloadAction<number>) => {

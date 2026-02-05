@@ -142,7 +142,8 @@ export const QuestsScreen: React.FC = () => {
         if (objective.target) {
           return factionFavors[objective.target as keyof typeof factionFavors] || 0;
         }
-        return 0;
+        // If no specific faction targeted, return the highest favor among all factions
+        return Math.max(...Object.values(factionFavors));
       case 'hire_staff':
         // Check if staff of target type exists
         if (objective.target) {

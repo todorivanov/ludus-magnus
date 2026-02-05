@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { selectGladiator, sellGladiator, setTraining, setResting } from '@features/gladiators/gladiatorsSlice';
+import { selectGladiator, sellGladiator, setTraining, setResting, type DeadGladiator } from '@features/gladiators/gladiatorsSlice';
 import { setScreen } from '@features/game/gameSlice';
 import { addGold } from '@features/player/playerSlice';
 import { MainLayout } from '@components/layout';
@@ -11,13 +11,20 @@ import { calculateSellValue } from '@utils/gladiatorGenerator';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
 
+type TabType = 'roster' | 'fallen';
+
 export const GladiatorsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { roster, selectedGladiatorId } = useAppSelector(state => state.gladiators);
+  const gladiatorsState = useAppSelector(state => state.gladiators);
+  const roster = gladiatorsState?.roster || [];
+  const deadGladiators = gladiatorsState?.deadGladiators || [];
+  const selectedGladiatorId = gladiatorsState?.selectedGladiatorId || null;
   const { currentDay } = useAppSelector(state => state.game);
   
+  const [activeTab, setActiveTab] = useState<TabType>('roster');
   const [showSellModal, setShowSellModal] = useState(false);
   const [gladiatorToSell, setGladiatorToSell] = useState<Gladiator | null>(null);
+  const [selectedFallen, setSelectedFallen] = useState<DeadGladiator | null>(null);
 
   const selectedGladiator = roster.find(g => g.id === selectedGladiatorId);
 
@@ -82,62 +89,142 @@ export const GladiatorsScreen: React.FC = () => {
             </h1>
             <p className="text-roman-marble-400">
               {roster.length} fighter{roster.length !== 1 ? 's' : ''} in your ludus
+              {deadGladiators.length > 0 && ` • ${deadGladiators.length} fallen`}
             </p>
           </div>
         </motion.div>
 
-        {roster.length === 0 ? (
-          <motion.div variants={itemVariants}>
-            <Card className="text-center py-12">
-              <CardContent>
-                <div className="text-6xl mb-4">⚔️</div>
-                <h3 className="font-roman text-xl text-roman-gold-500 mb-2">No Gladiators</h3>
-                <p className="text-roman-marble-400 mb-4">
-                  Visit the marketplace to recruit your first fighter
-                </p>
-                <Button 
-                  variant="gold"
-                  onClick={() => dispatch(setScreen('marketplace'))}
-                >
-                  Go to Marketplace
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-3 gap-6">
-            {/* Roster List */}
-            <motion.div variants={itemVariants} className="col-span-2 space-y-3">
-              {roster.map((gladiator) => (
-                <RosterCard
-                  key={gladiator.id}
-                  gladiator={gladiator}
-                  isSelected={selectedGladiatorId === gladiator.id}
-                  onClick={() => handleSelect(gladiator)}
-                />
-              ))}
-            </motion.div>
+        {/* Tabs */}
+        <motion.div variants={itemVariants} className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('roster')}
+            className={clsx(
+              'px-4 py-2 rounded-lg font-roman transition-all',
+              activeTab === 'roster'
+                ? 'bg-roman-gold-600 text-white'
+                : 'bg-roman-marble-800 text-roman-marble-300 hover:bg-roman-marble-700'
+            )}
+          >
+            ⚔️ Active Roster ({roster.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('fallen')}
+            className={clsx(
+              'px-4 py-2 rounded-lg font-roman transition-all',
+              activeTab === 'fallen'
+                ? 'bg-roman-crimson-600 text-white'
+                : 'bg-roman-marble-800 text-roman-marble-300 hover:bg-roman-marble-700'
+            )}
+          >
+            💀 Fallen ({deadGladiators.length})
+          </button>
+        </motion.div>
 
-            {/* Selected Gladiator Details */}
-            <motion.div variants={itemVariants}>
-              {selectedGladiator ? (
-                <GladiatorDetailPanel
-                  gladiator={selectedGladiator}
-                  onSell={() => handleSellClick(selectedGladiator)}
-                  onToggleTraining={() => handleToggleTraining(selectedGladiator)}
-                  onToggleResting={() => handleToggleResting(selectedGladiator)}
-                />
-              ) : (
-                <Card className="h-96 flex items-center justify-center">
-                  <CardContent className="text-center">
-                    <p className="text-roman-marble-500">
-                      Select a gladiator to view details
+        {/* Active Roster Tab */}
+        {activeTab === 'roster' && (
+          <>
+            {roster.length === 0 ? (
+              <motion.div variants={itemVariants}>
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="text-6xl mb-4">⚔️</div>
+                    <h3 className="font-roman text-xl text-roman-gold-500 mb-2">No Gladiators</h3>
+                    <p className="text-roman-marble-400 mb-4">
+                      Visit the marketplace to recruit your first fighter
+                    </p>
+                    <Button 
+                      variant="gold"
+                      onClick={() => dispatch(setScreen('marketplace'))}
+                    >
+                      Go to Marketplace
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-3 gap-6">
+                {/* Roster List */}
+                <motion.div variants={itemVariants} className="col-span-2 space-y-3">
+                  {roster.map((gladiator) => (
+                    <RosterCard
+                      key={gladiator.id}
+                      gladiator={gladiator}
+                      isSelected={selectedGladiatorId === gladiator.id}
+                      onClick={() => handleSelect(gladiator)}
+                    />
+                  ))}
+                </motion.div>
+
+                {/* Selected Gladiator Details */}
+                <motion.div variants={itemVariants}>
+                  {selectedGladiator ? (
+                    <GladiatorDetailPanel
+                      gladiator={selectedGladiator}
+                      onSell={() => handleSellClick(selectedGladiator)}
+                      onToggleTraining={() => handleToggleTraining(selectedGladiator)}
+                      onToggleResting={() => handleToggleResting(selectedGladiator)}
+                    />
+                  ) : (
+                    <Card className="h-96 flex items-center justify-center">
+                      <CardContent className="text-center">
+                        <p className="text-roman-marble-500">
+                          Select a gladiator to view details
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Fallen Gladiators Tab */}
+        {activeTab === 'fallen' && (
+          <>
+            {deadGladiators.length === 0 ? (
+              <motion.div variants={itemVariants}>
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="text-6xl mb-4">🕊️</div>
+                    <h3 className="font-roman text-xl text-roman-gold-500 mb-2">No Fallen Warriors</h3>
+                    <p className="text-roman-marble-400">
+                      May the gods protect your gladiators in battle
                     </p>
                   </CardContent>
                 </Card>
-              )}
-            </motion.div>
-          </div>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-3 gap-6">
+                {/* Fallen List */}
+                <motion.div variants={itemVariants} className="col-span-2 space-y-3">
+                  {deadGladiators.map((gladiator) => (
+                    <FallenCard
+                      key={gladiator.id}
+                      gladiator={gladiator}
+                      isSelected={selectedFallen?.id === gladiator.id}
+                      onClick={() => setSelectedFallen(gladiator)}
+                    />
+                  ))}
+                </motion.div>
+
+                {/* Selected Fallen Details */}
+                <motion.div variants={itemVariants}>
+                  {selectedFallen ? (
+                    <FallenDetailPanel gladiator={selectedFallen} />
+                  ) : (
+                    <Card className="h-96 flex items-center justify-center">
+                      <CardContent className="text-center">
+                        <p className="text-roman-marble-500">
+                          Select a fallen warrior to honor their memory
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Sell Confirmation Modal */}
@@ -437,3 +524,160 @@ const StatBar: React.FC<{ label: string; value: number }> = ({ label, value }) =
     <div className="w-8 text-xs text-roman-marble-300 text-right">{value}</div>
   </div>
 );
+
+// Fallen Card Component
+interface FallenCardProps {
+  gladiator: DeadGladiator;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+const FallenCard: React.FC<FallenCardProps> = ({ gladiator, isSelected, onClick }) => {
+  const classData = GLADIATOR_CLASSES[gladiator.class];
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      onClick={onClick}
+      className={clsx(
+        'card-roman cursor-pointer transition-all opacity-80',
+        isSelected && 'ring-2 ring-roman-crimson-500'
+      )}
+    >
+      <div className="flex items-center gap-4">
+        {/* Class Icon with death overlay */}
+        <div className="relative text-4xl w-16 h-16 flex items-center justify-center bg-roman-marble-800 rounded-lg">
+          {classData.icon}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg">
+            <span className="text-2xl">💀</span>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-roman text-lg text-roman-marble-300 line-through">{gladiator.name}</span>
+            <span className="text-xs px-2 py-0.5 bg-roman-crimson-900 rounded text-roman-crimson-300">
+              Fallen
+            </span>
+          </div>
+          <div className="text-sm text-roman-marble-500 mb-1">
+            {classData.name} • Level {gladiator.level}
+          </div>
+          <div className="text-xs text-roman-marble-600">
+            Died on Day {gladiator.deathDay} • {gladiator.causeOfDeath}
+          </div>
+        </div>
+
+        {/* Record */}
+        <div className="text-right">
+          <div className="text-sm text-roman-marble-400">
+            {gladiator.wins}W / {gladiator.losses}L
+          </div>
+          <div className="text-xs text-roman-crimson-400">
+            {gladiator.kills} kills
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Fallen Detail Panel Component
+interface FallenDetailPanelProps {
+  gladiator: DeadGladiator;
+}
+
+const FallenDetailPanel: React.FC<FallenDetailPanelProps> = ({ gladiator }) => {
+  const classData = GLADIATOR_CLASSES[gladiator.class];
+
+  return (
+    <Card variant="default" className="sticky top-4 border-roman-crimson-800">
+      <CardHeader className="bg-roman-crimson-900/30">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <span className="text-4xl">{classData.icon}</span>
+            <span className="absolute -bottom-1 -right-1 text-xl">💀</span>
+          </div>
+          <div>
+            <CardTitle className="text-roman-marble-300">{gladiator.name}</CardTitle>
+            <div className="text-sm text-roman-marble-500">
+              Level {gladiator.level} {classData.name}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Death Info */}
+        <div className="bg-roman-crimson-900/20 border border-roman-crimson-800 rounded-lg p-3">
+          <div className="text-roman-crimson-400 text-sm font-roman mb-2">⚰️ Memorial</div>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-roman-marble-500">Died</span>
+              <span className="text-roman-marble-300">Day {gladiator.deathDay}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-roman-marble-500">Cause</span>
+              <span className="text-roman-marble-300">{gladiator.causeOfDeath}</span>
+            </div>
+            {gladiator.killedBy && (
+              <div className="flex justify-between">
+                <span className="text-roman-marble-500">Killed by</span>
+                <span className="text-roman-crimson-400">{gladiator.killedBy}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Combat Record */}
+        <div>
+          <div className="text-xs text-roman-marble-500 uppercase mb-2">Combat Record</div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-roman-marble-800 rounded p-2">
+              <div className="text-lg font-roman text-health-high">{gladiator.wins}</div>
+              <div className="text-xs text-roman-marble-500">Wins</div>
+            </div>
+            <div className="bg-roman-marble-800 rounded p-2">
+              <div className="text-lg font-roman text-health-low">{gladiator.losses}</div>
+              <div className="text-xs text-roman-marble-500">Losses</div>
+            </div>
+            <div className="bg-roman-marble-800 rounded p-2">
+              <div className="text-lg font-roman text-roman-crimson-400">{gladiator.kills}</div>
+              <div className="text-xs text-roman-marble-500">Kills</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Final Stats */}
+        <div>
+          <div className="text-xs text-roman-marble-500 uppercase mb-2">Final Stats</div>
+          <div className="space-y-1.5">
+            <StatBar label="Strength" value={gladiator.stats.strength} />
+            <StatBar label="Agility" value={gladiator.stats.agility} />
+            <StatBar label="Dexterity" value={gladiator.stats.dexterity} />
+            <StatBar label="Endurance" value={gladiator.stats.endurance} />
+            <StatBar label="Constitution" value={gladiator.stats.constitution} />
+          </div>
+        </div>
+
+        {/* Legacy Stats */}
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-roman-marble-500">Peak Fame</span>
+            <span className="text-roman-gold-400">{gladiator.fame}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-roman-marble-500">Origin</span>
+            <span className="text-roman-marble-300 capitalize">{gladiator.origin}</span>
+          </div>
+        </div>
+
+        {/* Memorial Quote */}
+        <div className="divider-roman" />
+        <div className="text-center italic text-roman-marble-500 text-sm">
+          "May the gods grant you peace in the afterlife, brave warrior."
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
