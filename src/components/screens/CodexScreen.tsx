@@ -232,7 +232,7 @@ export const CodexScreen: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-roman-marble-900 via-roman-marble-800 to-roman-marble-900">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-roman-marble-900/95 backdrop-blur border-b-2 border-roman-gold-700 px-4 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="mx-auto flex items-center justify-between">
           <Button variant="ghost" onClick={handleBack}>
             ← {selectedEntry ? 'Back to List' : 'Back'}
           </Button>
@@ -245,7 +245,7 @@ export const CodexScreen: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="mx-auto p-4 sm:p-6">
         <AnimatePresence mode="wait">
           {selectedEntry ? (
             // Entry Detail View

@@ -12,7 +12,9 @@ import { addGold, spendGold, consumeResource } from '@features/player/playerSlic
 import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
 import { tickCooldowns as tickQuestCooldowns, incrementObjective } from '@features/quests/questsSlice';
 import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
+import { updateSponsorships } from '@features/fame/fameSlice';
 import { getQuestById } from '@data/quests';
+import { calculateMerchandiseIncome, MERCHANDISE_ITEMS } from '@data/fame';
 import { 
   updateConstructionProgress, 
   completeConstruction,
@@ -45,6 +47,8 @@ export const DashboardScreen: React.FC = () => {
   
   const fameState = useAppSelector(state => state.fame);
   const ludusFame = fameState?.ludusFame || 0;
+  const ownedMerchandise = fameState?.ownedMerchandise || [];
+  const activeSponsorships = fameState?.activeSponsorships || [];
   
   const gladiatorsState = useAppSelector(state => state.gladiators);
   const roster = gladiatorsState?.roster || [];
@@ -84,14 +88,37 @@ export const DashboardScreen: React.FC = () => {
     // Calculate total expenses
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Fame-based income
+    // Fame-based income (tier bonus)
     const fameIncome = Math.floor(ludusFame / 100) * 10;
     if (fameIncome > 0) {
       income.push({ source: 'Fame Income', amount: fameIncome });
     }
 
+    // Merchandise income
+    const totalGladiatorFame = roster.reduce((sum, g) => sum + (g.fame || 0), 0);
+    const merchIncome = ownedMerchandise
+      .filter(m => m.isActive)
+      .reduce((sum, m) => {
+        const item = MERCHANDISE_ITEMS.find(i => i.id === m.itemId);
+        return sum + (item ? calculateMerchandiseIncome(item, ludusFame, totalGladiatorFame) : 0);
+      }, 0);
+    if (merchIncome > 0) {
+      income.push({ source: 'Merchandise Sales', amount: merchIncome });
+    }
+
+    // Sponsorship income
+    const sponsorIncome = activeSponsorships.reduce((sum, s) => sum + s.dailyPayment, 0);
+    if (sponsorIncome > 0) {
+      income.push({ source: 'Sponsorships', amount: sponsorIncome });
+    }
+
     // Calculate total income
     const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
+
+    // Calculate net gold change and check if we can afford expenses
+    // We need to consider: currentGold + income - expenses >= 0
+    const goldAfterIncome = gold + totalIncome;
+    const canAffordExpenses = goldAfterIncome >= totalExpenses;
 
     // Apply gold changes
     if (totalIncome > 0) {
@@ -102,17 +129,27 @@ export const DashboardScreen: React.FC = () => {
         day: currentDay,
       }));
     }
-    if (totalExpenses > 0 && gold >= totalExpenses) {
+    if (totalExpenses > 0 && canAffordExpenses) {
       dispatch(spendGold({
         amount: totalExpenses,
         description: 'Daily Expenses',
         category: 'daily',
         day: currentDay,
       }));
-    } else if (totalExpenses > gold) {
+    } else if (!canAffordExpenses) {
+      // Still spend what we can (income + current gold)
+      const canSpend = Math.min(totalExpenses, goldAfterIncome);
+      if (canSpend > 0) {
+        dispatch(spendGold({
+          amount: canSpend,
+          description: 'Daily Expenses (Partial)',
+          category: 'daily',
+          day: currentDay,
+        }));
+      }
       alerts.push({
         severity: 'danger',
-        message: 'Insufficient gold for daily expenses! Staff morale may suffer.',
+        message: `Insufficient gold for daily expenses! Short ${totalExpenses - goldAfterIncome}g. Staff morale may suffer.`,
       });
     }
 
@@ -165,6 +202,30 @@ export const DashboardScreen: React.FC = () => {
         gladiator.isTraining || false,
         gladiator.isResting || false
       );
+      
+      // Check for any pending level-ups (for existing saves with excess XP)
+      let currentXP = updates.experience !== undefined ? updates.experience : gladiator.experience;
+      let currentLevel = updates.level !== undefined ? updates.level : gladiator.level;
+      let currentSkillPoints = updates.skillPoints !== undefined ? updates.skillPoints : (gladiator.skillPoints || 0);
+      let xpToLevel = currentLevel * 100;
+      
+      while (currentXP >= xpToLevel && currentLevel < 20) {
+        currentXP -= xpToLevel;
+        currentLevel += 1;
+        currentSkillPoints += 5;
+        gladEvents.push(`🎉 LEVEL UP! Now level ${currentLevel}! +5 skill points`);
+        xpToLevel = currentLevel * 100; // Update for next iteration
+      }
+      
+      // If leveling occurred, update the updates object
+      if (currentLevel > gladiator.level) {
+        updates.level = currentLevel;
+        updates.skillPoints = currentSkillPoints;
+        updates.experience = currentXP;
+        // Update derived stats on level up
+        updates.maxHP = 50 + currentLevel * 10 + Math.round(gladiator.stats.constitution * 2);
+        updates.maxStamina = 50 + currentLevel * 5 + Math.round(gladiator.stats.endurance * 1.5);
+      }
       
       // Apply the updates to the gladiator
       if (Object.keys(updates).length > 0) {
@@ -263,9 +324,10 @@ export const DashboardScreen: React.FC = () => {
       }
     });
 
-    // Tick cooldowns
+    // Tick cooldowns and update time-based systems
     dispatch(tickQuestCooldowns());
     dispatch(tickFactionCooldowns());
+    dispatch(updateSponsorships());
 
     // Create day report
     dispatch(setDayReport({
@@ -280,7 +342,7 @@ export const DashboardScreen: React.FC = () => {
     // Advance day
     dispatch(advanceDay());
     setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests]);
+  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships]);
 
   // Get phase icon
   const getPhaseIcon = (phase: string) => {

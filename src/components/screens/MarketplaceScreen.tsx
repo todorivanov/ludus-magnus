@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { setMarketPool, purchaseGladiator } from '@features/gladiators/gladiatorsSlice';
+import { refreshMarket, purchaseGladiator } from '@features/gladiators/gladiatorsSlice';
 import { spendGold, addResource, consumeResource } from '@features/player/playerSlice';
 import { incrementObjective } from '@features/quests/questsSlice';
 import { MainLayout } from '@components/layout';
@@ -14,10 +14,15 @@ import { clsx } from 'clsx';
 
 type MarketTab = 'gladiators' | 'resources';
 
+const MARKET_REFRESH_INTERVAL = 10; // Days between automatic refreshes
+const MANUAL_REFRESH_COST = 100; // Gold cost to manually refresh
+
 export const MarketplaceScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { gold, resources } = useAppSelector(state => state.player);
-  const { marketPool } = useAppSelector(state => state.gladiators);
+  const gladiatorsState = useAppSelector(state => state.gladiators);
+  const marketPool = gladiatorsState?.marketPool || [];
+  const lastMarketRefresh = gladiatorsState?.lastMarketRefresh || 0;
   const { marketPrices } = useAppSelector(state => state.economy);
   const { currentDay } = useAppSelector(state => state.game);
   const { activeQuests } = useAppSelector(state => state.quests);
@@ -33,12 +38,30 @@ export const MarketplaceScreen: React.FC = () => {
     clay: 5,
   });
 
-  // Generate market pool on first load
+  // Calculate days until next refresh
+  const daysUntilRefresh = MARKET_REFRESH_INTERVAL - (currentDay - lastMarketRefresh);
+  const shouldAutoRefresh = currentDay - lastMarketRefresh >= MARKET_REFRESH_INTERVAL;
+
+  // Generate market pool on first load or auto-refresh every 10 days
   useEffect(() => {
-    if (marketPool.length === 0) {
-      dispatch(setMarketPool(generateMarketPool(6)));
+    if (marketPool.length === 0 || shouldAutoRefresh) {
+      dispatch(refreshMarket({ pool: generateMarketPool(6), day: currentDay }));
     }
-  }, [dispatch, marketPool.length]);
+  }, [dispatch, marketPool.length, shouldAutoRefresh, currentDay]);
+
+  // Handle manual refresh
+  const handleManualRefresh = () => {
+    if (gold >= MANUAL_REFRESH_COST) {
+      dispatch(spendGold({
+        amount: MANUAL_REFRESH_COST,
+        description: 'Refreshed gladiator market',
+        category: 'service',
+        day: currentDay,
+      }));
+      dispatch(refreshMarket({ pool: generateMarketPool(6), day: currentDay }));
+      setSelectedGladiator(null);
+    }
+  };
 
   const handleBuyGladiator = (gladiator: Gladiator) => {
     if (gold >= gladiator.purchasePrice) {
@@ -154,11 +177,32 @@ export const MarketplaceScreen: React.FC = () => {
               Purchase gladiators and supplies for your ludus
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-roman-marble-800 px-4 py-2 rounded-lg border border-roman-gold-600">
-            <span className="text-2xl">🪙</span>
-            <span className="font-roman text-2xl text-roman-gold-400">{gold}</span>
-            <span className="text-roman-marble-400 text-sm">gold</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-roman-marble-800 px-4 py-2 rounded-lg border border-roman-gold-600">
+              <span className="text-2xl">🪙</span>
+              <span className="font-roman text-2xl text-roman-gold-400">{gold}</span>
+              <span className="text-roman-marble-400 text-sm">gold</span>
+            </div>
           </div>
+        </motion.div>
+
+        {/* Market Refresh Info */}
+        <motion.div variants={itemVariants} className="flex items-center justify-between bg-roman-marble-800 p-3 rounded-lg border border-roman-marble-700">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🔄</span>
+            <div>
+              <span className="text-roman-marble-300">Market refreshes in </span>
+              <span className="text-roman-gold-400 font-roman">{Math.max(0, daysUntilRefresh)} days</span>
+            </div>
+          </div>
+          <Button
+            variant={gold >= MANUAL_REFRESH_COST ? 'gold' : 'ghost'}
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={gold < MANUAL_REFRESH_COST}
+          >
+            🔄 Refresh Now ({MANUAL_REFRESH_COST}g)
+          </Button>
         </motion.div>
 
         {/* Tabs */}

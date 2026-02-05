@@ -195,17 +195,41 @@ export const processGladiatorDay = (
     const regimen = TRAINING_REGIMENS[trainingType];
     
     if (regimen) {
+      // Convert morale from 0.1-1.5 range to 0-100 range for calculations
+      const moraleForCalc = Math.round(((gladiator.morale || 1) - 0.1) / 1.4 * 100);
+      const fatiguePercent = (gladiator.fatigue || 0) * 100;
+      
       // Calculate and apply XP gain
       const xpGain = calculateXPGain(
         trainingType,
         gladiator.level,
         nutritionLevel,
-        gladiator.morale || 1,
-        (gladiator.fatigue || 0) * 100 // Convert to percentage
+        moraleForCalc,
+        fatiguePercent
       );
       
       if (xpGain > 0) {
-        updates.experience = (gladiator.experience || 0) + xpGain;
+        let newXP = (gladiator.experience || 0) + xpGain;
+        let newLevel = gladiator.level;
+        let newSkillPoints = gladiator.skillPoints || 0;
+        const xpToLevel = gladiator.level * 100;
+        
+        // Check for level up (can level up multiple times if enough XP)
+        while (newXP >= xpToLevel && newLevel < 20) {
+          newXP -= xpToLevel;
+          newLevel += 1;
+          newSkillPoints += 5;
+          events.push(`🎉 LEVEL UP! Now level ${newLevel}! +5 skill points`);
+        }
+        
+        updates.experience = newXP;
+        if (newLevel > gladiator.level) {
+          updates.level = newLevel;
+          updates.skillPoints = newSkillPoints;
+          // Update derived stats on level up
+          updates.maxHP = 50 + newLevel * 10 + Math.round(gladiator.stats.constitution * 2);
+          updates.maxStamina = 50 + newLevel * 5 + Math.round(gladiator.stats.endurance * 1.5);
+        }
         events.push(`+${xpGain} XP from ${regimen.name}`);
       }
       
@@ -213,8 +237,8 @@ export const processGladiatorDay = (
       const statGains = calculateStatGains(
         trainingType,
         nutritionLevel,
-        gladiator.morale || 1,
-        (gladiator.fatigue || 0) * 100
+        moraleForCalc,
+        fatiguePercent
       );
       
       statGains.forEach(gain => {

@@ -229,7 +229,7 @@ export const CombatScreen: React.FC = () => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="max-w-6xl mx-auto space-y-6"
+        className="mx-auto space-y-6"
       >
         {/* Match Info Header */}
         <div className="text-center">

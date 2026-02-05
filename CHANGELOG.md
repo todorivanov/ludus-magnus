@@ -15,9 +15,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-02-05
+
+Training XP calculation fix, Gladiator market refresh system, Automatic level-up system.
+
+### Fixed
+- **Training XP Mismatch**: Fixed bug where actual XP gained was much lower than displayed estimate. The morale value was being passed incorrectly (raw 0.1-1.5 instead of converted 0-100 scale), causing calculations to use ~50% effectiveness instead of proper morale bonus
+- **Stat Gains**: Same fix applied to stat gain calculations during training
+- **Automatic Level-Up**: Fixed bug where gladiators would not level up when reaching the XP threshold (e.g., 108/100 XP). Gladiators now automatically level up when they gain enough experience from:
+  - Training regimens (daily XP gains)
+  - Combat victories (50 XP base, +25 XP for kills)
+  - Any other XP source via `addExperience` action
+- **Level-Up Benefits**: Upon leveling up, gladiators now correctly receive:
+  - 5 skill points to distribute
+  - Increased max HP (based on level and constitution)
+  - Increased max stamina (based on level and endurance)
+  - Excess XP carries over to the next level
+- **Existing Saves**: Gladiators with excess XP in existing save games will automatically level up when ending the next day
+- **Sponsorship Duration**: Sponsorship days remaining now decrements daily when ending the day (was stuck at initial value) Sponsorships will now properly expire when their duration ends
+- **Merchandise Income**: Purchased merchandise items now correctly add their daily income to the end-of-day gold calculation
+- **Sponsorship Income**: Active sponsorship deals now correctly add their daily payment to the end-of-day gold calculation
+- **Day Report**: The day report now shows separate entries for Fame Income, Merchandise Sales, and Sponsorships
+- **Gold Calculation Order**: Fixed bug where the "insufficient gold" warning appeared even when income covered expenses. The system now correctly calculates `currentGold + income - expenses` before determining if you can afford expenses
+- **Partial Payment**: If you can't fully afford expenses, the system now pays what it can and shows how much you're short (e.g., "Short 15g")
+
+### Added
+- **Auto Market Refresh**: Gladiator market now automatically refreshes every 10 days with new gladiators
+- **Manual Market Refresh**: Pay 100 gold to instantly refresh the gladiator market for new options
+- **Refresh Counter**: UI shows days remaining until the next automatic market refresh
+
+---
+
 ## [1.0.4] - 2026-02-04
 
-Building completion now updates quest objectives., daily quests now properly repeat after cooldown expires, Training system now properly updates quest objectives.
+Building completion now updates quest objectives, daily quests now properly repeat after cooldown expires, Training system now properly updates quest objectives.
 
 ### Fixed
 - **Repeatable Quests**: Fixed bug where the "Accept Quest" button was hidden for completed repeatable quests, preventing players from accepting them again
@@ -144,6 +175,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.5 | 2026-02-05 | Auto level-up, training XP fix, market refresh, sponsorship/merchandise income |
 | 1.0.4 | 2026-02-04 | Fixed tracking of quest objectives |
 | 1.0.3 | 2026-02-04 | Fixed quest progress initialization timing issue |
 | 1.0.2 | 2026-02-04 | Quest progress initialization recognizes existing game state |

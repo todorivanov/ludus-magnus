@@ -5,12 +5,14 @@ interface GladiatorsState {
   roster: Gladiator[];
   marketPool: Gladiator[];
   selectedGladiatorId: string | null;
+  lastMarketRefresh: number; // Day when market was last refreshed
 }
 
 const initialState: GladiatorsState = {
   roster: [],
   marketPool: [],
   selectedGladiatorId: null,
+  lastMarketRefresh: 0,
 };
 
 const gladiatorsSlice = createSlice({
@@ -40,6 +42,10 @@ const gladiatorsSlice = createSlice({
     setMarketPool: (state, action: PayloadAction<Gladiator[]>) => {
       state.marketPool = action.payload;
     },
+    refreshMarket: (state, action: PayloadAction<{ pool: Gladiator[]; day: number }>) => {
+      state.marketPool = action.payload.pool;
+      state.lastMarketRefresh = action.payload.day;
+    },
     addToMarket: (state, action: PayloadAction<Gladiator>) => {
       state.marketPool.push(action.payload);
     },
@@ -66,13 +72,31 @@ const gladiatorsSlice = createSlice({
       const gladiator = state.roster.find(g => g.id === action.payload.id);
       if (gladiator) {
         gladiator.experience += action.payload.amount;
+        
+        // Auto level-up check
+        const xpToLevel = gladiator.level * 100;
+        while (gladiator.experience >= xpToLevel && gladiator.level < 20) {
+          gladiator.experience -= xpToLevel;
+          gladiator.level += 1;
+          gladiator.skillPoints = (gladiator.skillPoints || 0) + 5;
+          // Update derived stats on level up
+          gladiator.maxHP = 50 + gladiator.level * 10 + Math.round(gladiator.stats.constitution * 2);
+          gladiator.maxStamina = 50 + gladiator.level * 5 + Math.round(gladiator.stats.endurance * 1.5);
+        }
       }
     },
     levelUp: (state, action: PayloadAction<{ id: string }>) => {
       const gladiator = state.roster.find(g => g.id === action.payload.id);
       if (gladiator && gladiator.level < 20) {
+        const xpToLevel = gladiator.level * 100;
+        if (gladiator.experience >= xpToLevel) {
+          gladiator.experience -= xpToLevel;
+        }
         gladiator.level += 1;
-        gladiator.skillPoints += 5;
+        gladiator.skillPoints = (gladiator.skillPoints || 0) + 5;
+        // Update derived stats on level up
+        gladiator.maxHP = 50 + gladiator.level * 10 + Math.round(gladiator.stats.constitution * 2);
+        gladiator.maxStamina = 50 + gladiator.level * 5 + Math.round(gladiator.stats.endurance * 1.5);
       }
     },
     distributeStatPoints: (state, action: PayloadAction<{ id: string; stat: keyof Gladiator['stats']; points: number }>) => {
@@ -126,6 +150,21 @@ const gladiatorsSlice = createSlice({
         gladiator.wins += 1;
         if (action.payload.wasKill) {
           gladiator.kills += 1;
+        }
+        
+        // Add XP for victory (50 base, 25 extra for kills)
+        const xpGained = action.payload.wasKill ? 75 : 50;
+        gladiator.experience = (gladiator.experience || 0) + xpGained;
+        
+        // Check for level up
+        const xpToLevel = gladiator.level * 100;
+        while (gladiator.experience >= xpToLevel && gladiator.level < 20) {
+          gladiator.experience -= xpToLevel;
+          gladiator.level += 1;
+          gladiator.skillPoints = (gladiator.skillPoints || 0) + 5;
+          // Update derived stats on level up
+          gladiator.maxHP = 50 + gladiator.level * 10 + Math.round(gladiator.stats.constitution * 2);
+          gladiator.maxStamina = 50 + gladiator.level * 5 + Math.round(gladiator.stats.endurance * 1.5);
         }
       }
     },
@@ -261,6 +300,7 @@ export const {
   updateGladiator,
   selectGladiator,
   setMarketPool,
+  refreshMarket,
   addToMarket,
   removeFromMarket,
   purchaseGladiator,
@@ -291,6 +331,7 @@ export const {
 // Selectors
 export const selectRoster = (state: { gladiators: GladiatorsState }) => state.gladiators.roster;
 export const selectMarketPool = (state: { gladiators: GladiatorsState }) => state.gladiators.marketPool;
+export const selectLastMarketRefresh = (state: { gladiators: GladiatorsState }) => state.gladiators.lastMarketRefresh;
 export const selectGladiatorById = (state: { gladiators: GladiatorsState }, id: string) => 
   state.gladiators.roster.find(g => g.id === id);
 export const selectSelectedGladiator = (state: { gladiators: GladiatorsState }) => 
