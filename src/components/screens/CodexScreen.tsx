@@ -192,7 +192,7 @@ export const CodexScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   
   const gameState = useAppSelector(state => state.game);
-  const playerState = useAppSelector(state => state.player);
+  const fameState = useAppSelector(state => state.fame);
   const gladiatorsState = useAppSelector(state => state.gladiators);
   const ludusState = useAppSelector(state => state.ludus);
   const questsState = useAppSelector(state => state.quests);
@@ -202,12 +202,12 @@ export const CodexScreen: React.FC = () => {
 
   // Build game state for unlock checks
   const unlockState = useMemo(() => ({
-    ludusFame: playerState?.ludusFame || 0,
+    ludusFame: fameState?.ludusFame || 0,
     completedQuests: questsState?.completedQuestIds || [],
     buildings: ludusState?.buildings?.map(b => b.type) || [],
     gladiatorCount: gladiatorsState?.roster?.length || 0,
     currentDay: gameState?.currentDay || 1,
-  }), [playerState, questsState, ludusState, gladiatorsState, gameState]);
+  }), [fameState, questsState, ludusState, gladiatorsState, gameState]);
 
   // Get entries for selected category with unlock status
   const categoryEntries = useMemo(() => {

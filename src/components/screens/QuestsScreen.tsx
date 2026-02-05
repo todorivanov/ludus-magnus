@@ -151,6 +151,10 @@ export const QuestsScreen: React.FC = () => {
           return hasStaff ? 1 : 0;
         }
         return 0;
+      case 'reach_level':
+        // Return the highest level among all gladiators
+        if (roster.length === 0) return 0;
+        return Math.max(...roster.map(g => g.level));
       // win_matches, train, earn_gold, custom - start at 0 as they track NEW actions
       default:
         return 0;

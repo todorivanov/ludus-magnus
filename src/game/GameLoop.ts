@@ -146,11 +146,23 @@ export const calculatePassiveIncome = (
   return { total, breakdown };
 };
 
+// Staff bonuses interface
+export interface StaffBonuses {
+  trainingXP?: number;         // Percentage bonus from doctore
+  healingSpeed?: number;       // Percentage bonus from medicus
+  nutritionValue?: number;     // Percentage bonus from coquus
+  staminaRecovery?: number;    // Percentage bonus from coquus
+  morale?: number;             // Flat bonus from coquus
+  obedience?: number;          // Percentage bonus from lorarius
+  [key: string]: number | undefined;
+}
+
 // Process gladiator daily updates
 export const processGladiatorDay = (
   gladiator: Gladiator,
   isTraining: boolean,
-  isResting: boolean
+  isResting: boolean,
+  staffBonuses: StaffBonuses = {}
 ): {
   updates: Partial<Gladiator>;
   events: string[];
@@ -162,27 +174,46 @@ export const processGladiatorDay = (
   const nutritionLevel = (gladiator.nutrition || 'standard') as NutritionQuality;
   const nutrition = NUTRITION_OPTIONS[nutritionLevel];
   
-  // Natural HP recovery with nutrition modifier
+  // Calculate healing bonus from staff (medicus)
+  const healingSpeedBonus = (staffBonuses.healingSpeed || 0) / 100;
+  // Calculate nutrition bonus from staff (coquus)
+  const nutritionValueBonus = (staffBonuses.nutritionValue || 0) / 100;
+  
+  // Natural HP recovery with nutrition and staff modifiers
   if (gladiator.currentHP < gladiator.maxHP) {
-    const baseRecovery = 20; // Increased from 5
-    const restBonus = isResting ? 30 : 0; // Increased from 10 (total 50 when resting)
-    const nutritionBonus = nutrition.effects.healingModifier / 100;
+    const baseRecovery = 20;
+    const restBonus = isResting ? 30 : 0;
+    // Nutrition bonus from food + coquus skill bonus
+    const nutritionBonus = (nutrition.effects.healingModifier / 100) * (1 + nutritionValueBonus);
+    // Apply medicus healing bonus
+    const totalHealingBonus = 1 + nutritionBonus + healingSpeedBonus;
     const recovery = Math.min(
-      Math.round((baseRecovery + restBonus) * (1 + nutritionBonus)), 
+      Math.round((baseRecovery + restBonus) * totalHealingBonus), 
       gladiator.maxHP - gladiator.currentHP
     );
     if (recovery > 0) {
       updates.currentHP = gladiator.currentHP + recovery;
-      events.push(`Recovered ${recovery} HP`);
+      const bonusText = [];
+      if (healingSpeedBonus > 0) bonusText.push(`Medicus +${Math.round(healingSpeedBonus * 100)}%`);
+      if (nutritionValueBonus > 0) bonusText.push(`Coquus +${Math.round(nutritionValueBonus * 100)}%`);
+      if (bonusText.length > 0) {
+        events.push(`Recovered ${recovery} HP (${bonusText.join(', ')})`);
+      } else {
+        events.push(`Recovered ${recovery} HP`);
+      }
     }
   }
   
   // Stamina recovery - full recovery when resting, partial otherwise
+  // Apply coquus stamina recovery bonus
+  const staminaRecoveryBonus = (staffBonuses.staminaRecovery || 0) / 100;
   if (gladiator.currentStamina < gladiator.maxStamina) {
-    // Resting = full stamina recovery, otherwise recover 50%
-    const staminaRecovery = isResting 
-      ? gladiator.maxStamina - gladiator.currentStamina 
-      : Math.min(Math.round(gladiator.maxStamina * 0.5), gladiator.maxStamina - gladiator.currentStamina);
+    // Resting = full stamina recovery, otherwise recover 50% + coquus bonus
+    const baseRecoveryRate = isResting ? 1.0 : 0.5 + staminaRecoveryBonus;
+    const staminaRecovery = Math.min(
+      Math.round(gladiator.maxStamina * baseRecoveryRate), 
+      gladiator.maxStamina - gladiator.currentStamina
+    );
     if (staminaRecovery > 0) {
       updates.currentStamina = gladiator.currentStamina + staminaRecovery;
       events.push(`Recovered ${staminaRecovery} stamina`);
@@ -199,14 +230,22 @@ export const processGladiatorDay = (
       const moraleForCalc = Math.round(((gladiator.morale || 1) - 0.1) / 1.4 * 100);
       const fatiguePercent = (gladiator.fatigue || 0) * 100;
       
-      // Calculate and apply XP gain
-      const xpGain = calculateXPGain(
+      // Get doctore training XP bonus
+      const trainingXPBonus = (staffBonuses.trainingXP || 0) / 100;
+      
+      // Calculate and apply XP gain with doctore bonus
+      let xpGain = calculateXPGain(
         trainingType,
         gladiator.level,
         nutritionLevel,
         moraleForCalc,
         fatiguePercent
       );
+      
+      // Apply doctore bonus
+      if (trainingXPBonus > 0) {
+        xpGain = Math.round(xpGain * (1 + trainingXPBonus));
+      }
       
       if (xpGain > 0) {
         let newXP = (gladiator.experience || 0) + xpGain;

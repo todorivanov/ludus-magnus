@@ -15,6 +15,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-02-05
+
+Major content expansion: extended storyline with branching paths, new side quests, random events, expanded fame system, and numerous bug fixes.
+
+### Added
+- **Extended Storyline**: Expanded from 5 to 12 chapters with branching narrative paths
+  - Chapter 5: "The Shadow of Spartacus" - dealing with the famous rebellion
+  - Chapter 6: "At the Crossroads" - choose your patron (Military, Political, or Merchant path)
+  - Chapter 7A-C: Unique storylines based on your choice
+  - Chapter 8A-C: Continued branching with path-specific challenges
+  - Chapter 9-10: The road to Rome and the Colosseum
+  - Chapter 11: "The Emperor's Games" - the ultimate challenge
+  - Chapter 12: Endless mode epilogue
+
+- **New Side Quests** (20+ new quests):
+  - Staff recruitment: "The Legendary Doctore"
+  - Gladiator recruitment: "The Captured Barbarian", "The Greek Olympian", "The Gladiatrix"
+  - Rivalry quests: "Sabotage!", "The Grudge Match"
+  - Special events: "The Beast Hunt", "The Naumachia" (naval battle)
+  - Political quests: "Games for the Senate", "Champion of the People"
+  - Merchant quests: "Protecting the Trade Route", "The Great Auction"
+  - Military quests: "Training the Legion", "The Veteran"
+  - Patron quests: "The Noble's Request"
+
+- **New Random Events** (15+ new events):
+  - Crisis events: "The Plague", "Fire!", "Escaped Gladiator"
+  - Opportunity events: "The Famous Actor", "A Mysterious Gift", "The High Roller"
+  - Social events: "Invitation to a Feast", "A Political Marriage"
+  - Military events: "Legion Recruitment", "The Deserter"
+  - Religious events: "An Omen from the Gods", "Temple Donation Request"
+
+- **Branching Dialogue**: Many quests now feature meaningful choices with different consequences
+
+
+- **Ludus Fame Tiers**: Expanded from 5 to 11 tiers for smoother progression:
+  - Unknown (0) → Local (50) → Neighborhood (100) → District (175) → City (250) → Regional (400) → Provincial (600) → Famous (850) → Renowned (1200) → Legendary (1800) → Immortal (3000)
+  - New benefits include: supply discounts, building discounts, better gladiator prices, training bonuses, and combat stat bonuses at highest tiers
+  
+- **Gladiator Fame Tiers**: Expanded from 5 to 12 tiers:
+  - Novice (0) → Initiate (25) → Fighter (50) → Warrior (100) → Veteran (175) → Elite (275) → Champion (400) → Hero (550) → Legend (750) → Mythic (1000) → Immortal (1500)
+  - New titles: Novicius, Bellator, Praestans, Heros, Mythicus, Immortalis
+  - Progressive benefits for morale, crowd favor, critical hit chance, and intimidation
+  
+- **Merchandise Items**: Expanded from 8 to 22 items across 7 tiers:
+  - Basic: Clay Figurines, Painted Tiles, Ludus Banners
+  - Local: Leather Wristbands, Fighter Masks, Commemorative Cups
+  - City: Bronze Statuettes, Training Weapons, Replica Tridents, Gladiator Sandals
+  - Regional: Gladiator Portraits, Victory Coins, Silver Figurines
+  - Provincial: Arena Paintings, Mosaic Tile Art, Champion's Cloaks
+  - Renowned: Marble Busts, Silk Banners, Jeweled Replica Swords
+  - Legendary: Grand Portraits, Golden Statues, Imperial Collections
+  
+- **Sponsorship Deals**: Expanded from 5 to 19 deals across 5 tiers:
+  - Early (0-75 fame): Local Merchant, Tavern Partnership, Baker Sponsorship
+  - Growing (100-200 fame): Wine Trader, Olive Oil Partnership, Leather Crafter, Grain Supplier
+  - Established (250-400 fame): Noble Patron, Weapon Master, Bathhouse Partnership, Horse Breeder
+  - Elite (500-800 fame): Senator's Endorsement, Physicians Guild, Textile Magnate, Military Patronage
+  - Prestigious (1000+ fame): Imperial Favor, Maritime Merchant, Banking House, Temple Blessing, Arena Partnership, Consular Patronage, Imperial Games Contract
+  - New bonus types: grain discounts, healing bonuses, armor, weapon damage, training XP, discipline, political favor
+
+### Fixed
+- **Quest: "Train a gladiator to level X"**: Fixed quest objective that was incorrectly tracking number of training assignments instead of actual gladiator level
+  - New `reach_level` objective type now properly tracks the highest level among all gladiators
+  - Quest progress updates when gladiators level up from training or combat victories
+  - Initial progress correctly recognizes existing gladiator levels when accepting the quest
+- **Codex Unlock Bug**: Fixed Codex entries not unlocking when requirements were met
+  - CodexScreen and MainLayout were reading fame from wrong state slice (`playerState` instead of `fameState`)
+  - Fame-based unlocks now correctly check against actual ludus fame
+- **Sabotage System**: Sabotage events from hostile factions now actually trigger
+  - `checkSabotageRisk` is now called during end-of-day processing
+  - Low faction favor increases chance of sabotage attacks
+  - Guards provide protection against sabotage
+  - Pending sabotage shows alert in Politics screen and day report
+  - Sabotage History now tracks prevented and occurred events
+- **Staff Skill Learning**: Fixed staff skills not updating in UI after learning
+  - Staff detail panel now properly reflects skill changes immediately
+  - Changed from storing full staff object to using ID reference for live updates
+- **Staff Skill Bonuses**: All staff skill bonuses are now properly applied:
+  - **Doctore**: +25% base training XP, plus skill bonuses (Drill Master +15%, Weapon Expert +10%, Legendary Trainer +25%)
+  - **Medicus**: +30% base healing speed per medicus, plus skill bonuses (Field Medicine +20%, Surgeon +15%, Master Healer +25%)
+  - **Lanista**: +20% base gold from fights, plus skill bonuses (Negotiator +15%, Promoter +20% fame/+10% gold, Master Dealer +25% gold)
+  - **Coquus**: +15% base nutrition effectiveness per cook, plus skill bonuses for stamina recovery and morale
+  - **Guard**: Security bonuses (already working from 1.0.6)
+- **Daily Processing**: Staff bonuses now correctly calculated and applied during end-of-day processing
+- **Combat Rewards**: Lanista bonuses now apply to arena victory gold and fame rewards
+
+---
+
 ## [1.0.6] - 2026-02-05
 
 Automatic gladiator level-up, faction favor quest tracking, death match consequences, staff XP system.
@@ -210,6 +298,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.1.0 | 2026-02-05 | Major content expansion: 12 chapters, branching storylines, 35+ quests, bug fixes |
 | 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |
 | 1.0.5 | 2026-02-05 | Training XP fix, market refresh, sponsorship/merchandise income |
 | 1.0.4 | 2026-02-04 | Fixed tracking of quest objectives |

@@ -10,8 +10,10 @@ import {
 } from '@features/game/gameSlice';
 import { addGold, spendGold, consumeResource } from '@features/player/playerSlice';
 import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
-import { tickCooldowns as tickQuestCooldowns, incrementObjective } from '@features/quests/questsSlice';
-import { tickCooldowns as tickFactionCooldowns } from '@features/factions/factionsSlice';
+import { calculateStaffBonuses } from '@data/staff';
+import { tickCooldowns as tickQuestCooldowns, incrementObjective, updateObjective } from '@features/quests/questsSlice';
+import { tickCooldowns as tickFactionCooldowns, setPendingSabotage } from '@features/factions/factionsSlice';
+import { checkSabotageRisk } from '@data/factions';
 import { updateSponsorships } from '@features/fame/fameSlice';
 import { getQuestById } from '@data/quests';
 import { calculateMerchandiseIncome, MERCHANDISE_ITEMS } from '@data/fame';
@@ -64,6 +66,10 @@ export const DashboardScreen: React.FC = () => {
   
   const questsState = useAppSelector(state => state.quests);
   const activeQuests = questsState?.activeQuests || [];
+
+  const factionsState = useAppSelector(state => state.factions);
+  const factionFavors = factionsState?.factionFavors || { optimates: 0, populares: 0, military: 0, merchants: 0 };
+  const protectionLevel = factionsState?.protectionLevel || 0;
 
   const [processingDay, setProcessingDay] = useState(false);
 
@@ -197,12 +203,36 @@ export const DashboardScreen: React.FC = () => {
       events.push(`Consumed ${totalWineConsumed} wine`);
     }
 
+    // Calculate staff bonuses for gladiator processing
+    const staffBonuses = calculateStaffBonuses(
+      employees.map(e => ({ role: e.role, level: e.level, skills: e.skills })),
+      buildings.map(b => ({ type: b.type, level: b.level }))
+    );
+
+    // Add base bonuses from having staff (even without skills)
+    // Doctore: +25% training XP
+    const hasDoctore = employees.some(e => e.role === 'doctore');
+    if (hasDoctore) {
+      staffBonuses.trainingXP = (staffBonuses.trainingXP || 0) + 25;
+    }
+    // Medicus: +30% healing speed
+    const medicusCount = employees.filter(e => e.role === 'medicus').length;
+    if (medicusCount > 0) {
+      staffBonuses.healingSpeed = (staffBonuses.healingSpeed || 0) + 30 * medicusCount;
+    }
+    // Coquus: +15% nutrition effectiveness
+    const coquusCount = employees.filter(e => e.role === 'coquus').length;
+    if (coquusCount > 0) {
+      staffBonuses.nutritionValue = (staffBonuses.nutritionValue || 0) + 15 * coquusCount;
+    }
+
     // Process gladiator recovery
     roster.forEach(gladiator => {
       const { updates, events: gladEvents } = processGladiatorDay(
         gladiator,
         gladiator.isTraining || false,
-        gladiator.isResting || false
+        gladiator.isResting || false,
+        staffBonuses
       );
       
       // Check for any pending level-ups (for existing saves with excess XP)
@@ -237,6 +267,27 @@ export const DashboardScreen: React.FC = () => {
       if (gladEvents.length > 0) {
         events.push(`${gladiator.name}: ${gladEvents.join(', ')}`);
       }
+    });
+
+    // Update reach_level quest objectives with highest gladiator level
+    const highestLevel = roster.length > 0 
+      ? Math.max(...roster.map(g => g.level))
+      : 0;
+    
+    activeQuests.forEach(activeQuest => {
+      const questDef = getQuestById(activeQuest.questId);
+      if (!questDef) return;
+      
+      questDef.objectives.forEach(objective => {
+        if (objective.type === 'reach_level') {
+          dispatch(updateObjective({
+            questId: activeQuest.questId,
+            objectiveId: objective.id,
+            progress: highestLevel,
+            required: objective.required,
+          }));
+        }
+      });
     });
 
     // Calculate unrest
@@ -403,6 +454,20 @@ export const DashboardScreen: React.FC = () => {
     dispatch(tickFactionCooldowns());
     dispatch(updateSponsorships());
 
+    // Check for sabotage from hostile factions
+    const sabotageCheck = checkSabotageRisk(factionFavors, protectionLevel + guardCount * 5);
+    if (sabotageCheck.willOccur && sabotageCheck.event) {
+      dispatch(setPendingSabotage({
+        eventId: sabotageCheck.event.id,
+        perpetrator: sabotageCheck.event.perpetrator,
+        preventionCost: sabotageCheck.event.preventionCost,
+      }));
+      alerts.push({
+        severity: 'danger',
+        message: `⚠️ Sabotage attempt detected: ${sabotageCheck.event.name}! Check Politics screen.`,
+      });
+    }
+
     // Create day report
     dispatch(setDayReport({
       day: currentDay,
@@ -416,7 +481,7 @@ export const DashboardScreen: React.FC = () => {
     // Advance day
     dispatch(advanceDay());
     setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships]);
+  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
 
   // Get phase icon
   const getPhaseIcon = (phase: string) => {

@@ -18,6 +18,7 @@ import { addGold } from '@features/player/playerSlice';
 import { addLudusFame } from '@features/fame/fameSlice';
 import { incrementObjective, updateObjective } from '@features/quests/questsSlice';
 import { getQuestById } from '@data/quests';
+import { calculateStaffBonuses } from '@data/staff';
 import { Card, CardContent, Button, ProgressBar } from '@components/ui';
 import { 
   COMBAT_ACTIONS, 
@@ -39,6 +40,12 @@ export const CombatScreen: React.FC = () => {
   const questsState = useAppSelector(state => state.quests);
   const activeQuests = questsState?.activeQuests || [];
   const currentLudusFame = useAppSelector(state => state.fame?.ludusFame || 0);
+  const staffState = useAppSelector(state => state.staff);
+  const employees = staffState?.employees || [];
+  const ludusState = useAppSelector(state => state.ludus);
+  const buildings = ludusState?.buildings || [];
+  const gladiatorsState = useAppSelector(state => state.gladiators);
+  const roster = gladiatorsState?.roster || [];
   
   const [engine, setEngine] = useState<CombatEngine | null>(null);
   const [gameState, setGameState] = useState<CombatState | null>(null);
@@ -128,18 +135,50 @@ export const CombatScreen: React.FC = () => {
     }));
 
     if (isVictory) {
-      // Victory rewards
-      const goldReward = Math.round(50 * matchData.rewardMultiplier);
-      const fameReward = Math.round(20 * matchData.fameMultiplier);
+      // Calculate staff bonuses (lanista bonuses for gold and fame)
+      const staffBonuses = calculateStaffBonuses(
+        employees.map(e => ({ role: e.role, level: e.level, skills: e.skills })),
+        buildings.map(b => ({ type: b.type, level: b.level }))
+      );
+      
+      // Base lanista bonuses (even without skills)
+      const hasLanista = employees.some(e => e.role === 'lanista');
+      const lanistaGoldBonus = hasLanista ? 20 : 0; // +20% gold from fights
+      const lanistaFameBonus = (staffBonuses.fameGain || 0); // Fame from skills
+      const lanistaFightGold = (staffBonuses.fightGold || 0); // Gold from skills
+      
+      // Victory rewards with staff bonuses
+      const baseGold = 50 * matchData.rewardMultiplier;
+      const goldMultiplier = 1 + (lanistaGoldBonus + lanistaFightGold) / 100;
+      const goldReward = Math.round(baseGold * goldMultiplier);
+      
+      const baseFame = 20 * matchData.fameMultiplier;
+      const fameMultiplier = 1 + lanistaFameBonus / 100;
+      const fameReward = Math.round(baseFame * fameMultiplier);
 
       dispatch(addGold({
         amount: goldReward,
-        description: `Victory: ${matchData.name}`,
+        description: `Victory: ${matchData.name}${hasLanista ? ' (Lanista bonus)' : ''}`,
         category: 'arena',
         day: currentDay,
       }));
       dispatch(addFame({ id: combatState.gladiator.id, amount: fameReward }));
       dispatch(recordWin({ id: combatState.gladiator.id, wasKill: gameState.opponent.currentHP <= 0 }));
+      
+      // Calculate the new level after combat XP (50 base + 25 for kill)
+      const combatXP = 50 + (gameState.opponent.currentHP <= 0 ? 25 : 0);
+      const gladiatorId = combatState.gladiator?.id;
+      const gladiator = gladiatorId ? roster.find(g => g.id === gladiatorId) : null;
+      let potentialNewLevel = gladiator?.level || 1;
+      if (gladiator) {
+        let xp = gladiator.experience + combatXP;
+        let level = gladiator.level;
+        while (xp >= level * 100 && level < 20) {
+          xp -= level * 100;
+          level++;
+        }
+        potentialNewLevel = level;
+      }
       
       // Also add ludus fame for victories
       dispatch(addLudusFame({
@@ -170,6 +209,19 @@ export const CombatScreen: React.FC = () => {
                 questId: activeQuest.questId,
                 objectiveId: objective.id,
                 progress: newLudusFame,
+                required: objective.required,
+              }));
+            }
+            // Update reach_level objectives with highest gladiator level
+            if (objective.type === 'reach_level') {
+              const highestLevel = Math.max(
+                potentialNewLevel,
+                ...roster.filter(g => g.id !== gladiatorId).map(g => g.level)
+              );
+              dispatch(updateObjective({
+                questId: activeQuest.questId,
+                objectiveId: objective.id,
+                progress: highestLevel,
                 required: objective.required,
               }));
             }

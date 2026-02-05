@@ -18,8 +18,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const currentPhase = gameState?.currentPhase || 'morning';
   
   const playerState = useAppSelector(state => state.player);
+  const fameState = useAppSelector(state => state.fame);
   const gold = playerState?.gold || 0;
-  const ludusFame = playerState?.ludusFame || 0;
+  const ludusFame = fameState?.ludusFame || 0;
   const ludusName = playerState?.ludusName || 'Ludus Magnus';
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

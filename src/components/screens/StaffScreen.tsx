@@ -28,10 +28,13 @@ export const StaffScreen: React.FC = () => {
   const { buildings } = useAppSelector(state => state.ludus);
   const { currentDay } = useAppSelector(state => state.game);
 
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [showHireModal, setShowHireModal] = useState(false);
   const [showFireModal, setShowFireModal] = useState(false);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<StaffRole | 'all'>('all');
+
+  // Derive selectedStaff from employees to get the latest state
+  const selectedStaff = selectedStaffId ? employees.find(e => e.id === selectedStaffId) || null : null;
 
   // Initialize staff market if empty
   useEffect(() => {
@@ -97,7 +100,7 @@ export const StaffScreen: React.FC = () => {
   const handleFire = () => {
     if (!selectedStaff) return;
     dispatch(fireStaff(selectedStaff.id));
-    setSelectedStaff(null);
+    setSelectedStaffId(null);
     setShowFireModal(false);
   };
 
@@ -226,8 +229,8 @@ export const StaffScreen: React.FC = () => {
                       <StaffCard
                         key={staff.id}
                         staff={staff}
-                        isSelected={selectedStaff?.id === staff.id}
-                        onClick={() => setSelectedStaff(staff)}
+                        isSelected={selectedStaffId === staff.id}
+                        onClick={() => setSelectedStaffId(staff.id)}
                         buildings={buildings}
                       />
                     ))}
