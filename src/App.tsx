@@ -11,6 +11,7 @@ import {
   StaffScreen,
   ArenaScreen,
   CombatScreen,
+  TournamentsScreen,
   FameScreen,
   PoliticsScreen,
   QuestsScreen,
@@ -44,6 +45,8 @@ const App: React.FC = () => {
         return <ArenaScreen />;
       case 'combat':
         return <CombatScreen />;
+      case 'tournaments':
+        return <TournamentsScreen />;
       case 'fame':
         return <FameScreen />;
       case 'politics':

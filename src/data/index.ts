@@ -7,3 +7,4 @@ export * from './combat';
 export * from './fame';
 export * from './factions';
 export * from './quests';
+export * from './marketplace';

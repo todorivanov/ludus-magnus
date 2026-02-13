@@ -15,6 +15,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-02-13
+
+Major marketplace expansion with 35+ purchasable items, tournament system enhancements, and expanded building options for deeper ludus management.
+
+### Added
+
+#### Marketplace Items System
+- **35+ New Purchasable Items** across 6 categories:
+  - **Equipment** (6 items): Weapons and armor providing permanent stat boosts
+    - Standard Gladius, Masterwork Gladius, Reinforced Scutum, Champion's Panoply (legendary)
+    - Training Weights, Mercury's Sandals
+  - **Consumables** (7 items): Potions and tonics for immediate effects
+    - Healing Potion, Stamina Tonic, Gladiator's Brew
+    - Pain Relief Salve, Miracle Cure, Berserker Mushroom, Focus Elixir
+  - **Training Items** (4 items): Manuals and scrolls to accelerate progression
+    - Combat Manual (100 XP), Master's Techniques (1 skill point)
+    - Legendary Combat Scroll (3 skill points), Elite Training Regimen (+50% training speed)
+  - **Luxury Items** (5 items): Morale and fame boosters
+    - Falernian Wine, Silk Bedding, Golden Laurel Crown
+    - Arabian Perfume (affects all gladiators), Marble Statue (ludus fame)
+  - **Beasts** (4 items): Animals for training and spectacle
+    - Training Wolf, Wild Boar, Arena Lion, Caledonian Bear
+  - **Services** (4 items): Special services from experts
+    - Greek Physician, Master Trainer Visit, Oracle's Blessing, Imperial Introduction
+
+#### Item Management Features
+- **Item Inventory System**: Track purchased items with quantities and usage history
+- **Item Application**: Use items on gladiators from the Gladiators screen via new "🎒 Use Item" button
+- **Smart Item Effects**: Context-aware item effects with immediate or temporary benefits:
+  - Permanent stat boosts from equipment
+  - Instant healing of HP/stamina
+  - Injury treatment (reduce recovery time or instant heal)
+  - XP grants and skill points
+  - Temporary combat buffs for next fight
+  - Multi-day training efficiency boosts
+  - Morale improvements (individual or roster-wide)
+  - Fame increases (gladiator or ludus)
+- **Limited Stock Items**: 6 legendary items with limited availability (1 in stock each)
+- **Fame Requirements**: High-tier items unlock at specific ludus fame levels (50-500 fame)
+- **Item Categories Tab**: New marketplace interface with separate tabs for each item category
+- **Item Preview**: Detailed item cards showing effects, requirements, stock, and owned quantity
+- **Effect Tracking**: Redux state management for active temporary effects (buffs, training boosts)
+
+#### Expanded Buildings
+- **13 New Buildings** across multiple categories for enhanced ludus management:
+  - **Training**: Gymnasium (advanced training), Arena Replica (practice arena), Library (tactical knowledge)
+  - **Production**: Forge (weapon crafting), Oil Press (oil production)
+  - **Commerce**: Marketplace (income generation), Triclinium (dining hall)
+  - **Security**: Guard Tower (enhanced security), Barracks (staff housing)
+  - **Entertainment**: Spectator Seats (fame generation), Beast Pens (beast training)
+  - **Infrastructure**: Hypocaust (heating system), Ludus Office (administration)
+- **New Building Categories**: Added 'commerce' and 'entertainment' categories
+- **Building Bonuses**: Each building provides unique bonuses (training speed, morale, fame, security, income)
+- **Building Prerequisites**: Some buildings require other buildings or staff roles to unlock
+- **Multi-Level Progression**: All new buildings have 3 upgrade levels with scaling costs and bonuses
+
+#### Tournament System (Integrated with Marketplace)
+- **Tournament Brackets**: 8, 16, or 32-gladiator tournaments with bracket progression
+- **Tournament Types**: 4 tournament tiers (Local, Regional, Grand Arena, Imperial Games)
+- **Multiple Gladiators**: Enter multiple gladiators from your ludus
+- **Tournament Rewards**: Progressive stage rewards plus final placement bonuses
+- **Death Tournaments**: Sine missione tournaments where gladiators can die
+- **Player Combat Choice**: Choose full turn-based combat or auto-simulation for each match
+- **HP Persistence**: Gladiator HP carries between tournament rounds
+- **Tournament Completion**: Special rewards and fame for tournament victories
+
+#### Content Expansion
+- **150+ New Gladiator Names**: Significantly expanded Roman name pool:
+  - 50+ new Roman first names (Decimus, Lucius, Tiberius, Gaius, etc.)
+  - 40+ new cognomens (Corvus, Lupus, Aquila, Ferox, etc.)
+  - 60+ new foreign names (Spartacus, Brennus, Alaric, Atticus, etc.)
+- **Enhanced Name Generation**: Better variety and authenticity for generated gladiators
+
+### Technical
+
+#### New Redux Slices
+- **Marketplace Slice**: Manages purchased items, inventory, active effects, and item stock
+- **Tournaments Slice**: Manages active tournaments, brackets, matches, and progression
+
+#### New Components
+- **ItemInventoryModal**: Modal interface for selecting and using items on gladiators
+- **MarketItemCard**: Display component for marketplace items with stock and requirements
+- **MarketItemDetails**: Detailed item preview with effects and purchase options
+- **TournamentsScreen**: Tournament selection and management interface
+- **BracketView**: Visual tournament bracket display with match progression
+
+#### New Utilities
+- **marketplaceEffects.ts**: Apply item effects to gladiators with proper calculations
+- **TournamentEngine.ts**: Bracket generation, match simulation, and progression logic
+
+#### Data Structures
+- **marketplace.ts**: Complete item catalog with categories, effects, and pricing
+- **tournaments.ts**: Tournament types, rules, rewards, and helper functions
+
+### Improved
+- **Marketplace UI**: Reorganized with category tabs for better navigation
+- **Gladiator Management**: Added item usage capability to gladiator detail panel
+- **Arena Screen**: Integrated tournaments alongside regular fights with tabbed interface
+- **Economic Depth**: More meaningful spending options beyond gladiators and resources
+
+### Documentation
+- **MARKETPLACE_ITEMS.md**: Complete guide to all marketplace items, usage, and strategy tips
+- **Item Categories**: Detailed documentation of each category and its game mechanic connections
+- **Strategic Tips**: Guidance on optimal item usage and purchasing strategies
+
+---
+
 ## [1.1.0] - 2026-02-05
 
 Major content expansion: extended storyline with branching paths, new side quests, random events, expanded fame system, and numerous bug fixes.
@@ -298,6 +405,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.2.0 | 2026-02-13 | Marketplace expansion: 35+ items, tournament system, 13 new buildings |
 | 1.1.0 | 2026-02-05 | Major content expansion: 12 chapters, branching storylines, 35+ quests, bug fixes |
 | 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |
 | 1.0.5 | 2026-02-05 | Training XP fix, market refresh, sponsorship/merchandise income |

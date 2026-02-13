@@ -385,8 +385,21 @@ export const generateOpponent = (
   };
   
   // Generate name
-  const firstNames = ['Maximus', 'Spartacus', 'Crixus', 'Gannicus', 'Oenomaus', 'Agron', 'Duro', 'Varro', 'Barca', 'Doctore'];
-  const titles = ['the Fierce', 'the Undefeated', 'Bloodfist', 'Ironhide', 'the Quick', 'Deathbringer', 'the Savage', ''];
+  const firstNames = [
+    'Maximus', 'Spartacus', 'Crixus', 'Gannicus', 'Oenomaus', 'Agron', 'Duro', 'Varro', 'Barca', 'Doctore',
+    'Titus', 'Marcus', 'Cassius', 'Brutus', 'Flavius', 'Antonius', 'Gaius', 'Lucius', 'Quintus', 'Decimus',
+    'Scipio', 'Gracchus', 'Marius', 'Sulla', 'Pompey', 'Aurelius', 'Severus', 'Commodus', 'Hadrian', 'Trajan',
+    'Valerius', 'Claudius', 'Nero', 'Caligula', 'Tiberius', 'Augustus', 'Julius', 'Octavius', 'Vespasian', 'Domitian',
+    'Regulus', 'Fabius', 'Horatius', 'Cincinnatus', 'Corvus', 'Cursor', 'Camillus', 'Flaminius', 'Paullus', 'Scaurus'
+  ];
+  const titles = [
+    'the Fierce', 'the Undefeated', 'Bloodfist', 'Ironhide', 'the Quick', 'Deathbringer', 'the Savage',
+    'the Mighty', 'Lionheart', 'the Merciless', 'Stormbreaker', 'the Colossus', 'the Reaper', 'the Gladiator',
+    'the Champion', 'Warbringer', 'the Invincible', 'the Conqueror', 'Skullcrusher', 'the Butcher',
+    'the Shadow', 'the Thunder', 'the Blade', 'the Beast', 'the Hammer', 'the Titan', 'the Scourge',
+    'the Executioner', 'the Terror', 'the Destroyer', 'the Ravager', 'the Slayer', 'the Fury', 'the Wrath',
+    ''
+  ];
   const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${titles[Math.floor(Math.random() * titles.length)]}`.trim();
   
   return {

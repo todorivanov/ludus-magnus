@@ -702,7 +702,7 @@ export const DashboardScreen: React.FC = () => {
                     className="w-full"
                     onClick={() => dispatch(setScreen('arena'))}
                   >
-                    View Arena Schedule
+                    🏟️ Visit the Arena
                   </Button>
                   <Button
                     variant="gold"

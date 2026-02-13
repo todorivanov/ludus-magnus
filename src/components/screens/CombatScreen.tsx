@@ -5,6 +5,9 @@ import { setScreen } from '@features/game/gameSlice';
 import { 
   endCombat,
 } from '@features/combat/combatSlice';
+import {
+  completeMatch as completeTournamentMatch,
+} from '@features/tournaments/tournamentsSlice';
 import { 
   updateHP, 
   updateStamina, 
@@ -37,6 +40,8 @@ export const CombatScreen: React.FC = () => {
   const combatState = useAppSelector(state => state.combat);
   const gameStateRedux = useAppSelector(state => state.game);
   const currentDay = gameStateRedux?.currentDay || 1;
+  const tournamentsState = useAppSelector(state => state.tournaments);
+  const activeTournament = tournamentsState?.activeTournament;
   const questsState = useAppSelector(state => state.quests);
   const activeQuests = questsState?.activeQuests || [];
   const currentLudusFame = useAppSelector(state => state.fame?.ludusFame || 0);
@@ -122,9 +127,15 @@ export const CombatScreen: React.FC = () => {
     if (!gameState || !combatState?.gladiator) return;
 
     const isVictory = gameState.winner === gameState.player.name;
-    const matchData = MATCH_TYPES[combatState.matchType];
+    const matchData = MATCH_TYPES[combatState.matchType] || { 
+      name: 'Tournament Match', 
+      rewardMultiplier: 0, 
+      fameMultiplier: 0, 
+      rules: combatState.rules 
+    };
+    const isTournamentMatch = combatState.tournamentMatchId && activeTournament;
 
-    // Update gladiator HP/Stamina
+    // Update gladiator HP/Stamina (always do this)
     dispatch(updateHP({ 
       id: combatState.gladiator.id, 
       hp: gameState.player.currentHP 
@@ -134,7 +145,8 @@ export const CombatScreen: React.FC = () => {
       stamina: gameState.player.currentStamina 
     }));
 
-    if (isVictory) {
+    // Only apply regular arena rewards if NOT a tournament match
+    if (isVictory && !isTournamentMatch) {
       // Calculate staff bonuses (lanista bonuses for gold and fame)
       const staffBonuses = calculateStaffBonuses(
         employees.map(e => ({ role: e.role, level: e.level, skills: e.skills })),
@@ -228,8 +240,8 @@ export const CombatScreen: React.FC = () => {
           });
         }
       });
-    } else {
-      // Defeat
+    } else if (!isTournamentMatch) {
+      // Defeat (only process if not tournament - tournament handles its own logic)
       dispatch(recordLoss({ id: combatState.gladiator.id }));
 
       // Check for death in death match
@@ -257,8 +269,47 @@ export const CombatScreen: React.FC = () => {
       }
     }
 
-    dispatch(endCombat());
-    dispatch(setScreen('arena'));
+    if (isTournamentMatch && combatState.tournamentMatchId) {
+      // Find the match in the tournament
+      const match = activeTournament.bracket.find(m => m.id === combatState.tournamentMatchId!);
+      
+      if (match && match.participant1 && match.participant2) {
+        // Determine winner and loser
+        const playerParticipant = match.participant1.isPlayerGladiator 
+          ? match.participant1 
+          : match.participant2;
+        const opponentParticipant = match.participant1.isPlayerGladiator 
+          ? match.participant2 
+          : match.participant1;
+        
+        // Create new participant objects with updated HP/stamina (don't mutate Redux state)
+        const winner = {
+          ...(isVictory ? playerParticipant : opponentParticipant),
+          currentHP: isVictory ? gameState.player.currentHP : gameState.opponent.currentHP,
+          currentStamina: isVictory ? gameState.player.currentStamina : gameState.opponent.currentStamina,
+        };
+        
+        const loser = {
+          ...(isVictory ? opponentParticipant : playerParticipant),
+          currentHP: isVictory ? gameState.opponent.currentHP : gameState.player.currentHP,
+          currentStamina: isVictory ? gameState.opponent.currentStamina : gameState.player.currentStamina,
+          died: (activeTournament.rules === 'death' && (isVictory ? gameState.opponent.currentHP : gameState.player.currentHP) <= 0),
+        };
+        
+        // Complete the tournament match
+        dispatch(completeTournamentMatch({
+          matchId: combatState.tournamentMatchId,
+          winner,
+          loser,
+        }));
+      }
+      
+      dispatch(endCombat());
+      dispatch(setScreen('arena'));
+    } else {
+      dispatch(endCombat());
+      dispatch(setScreen('arena'));
+    }
   };
 
   // If no combat state, show error
@@ -590,9 +641,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 }) => {
   const isVictory = gameState.winner === gameState.player.name;
   const matchData = MATCH_TYPES[matchType];
-
-  const goldReward = isVictory ? Math.round(50 * matchData.rewardMultiplier) : 0;
-  const fameReward = isVictory ? Math.round(20 * matchData.fameMultiplier) : -5;
+  
+  // For tournament matches, rewards are handled by the tournament system
+  const isTournamentMatch = matchType === 'tournament';
+  const goldReward = isTournamentMatch ? 0 : (isVictory ? Math.round(50 * (matchData?.rewardMultiplier || 1)) : 0);
+  const fameReward = isTournamentMatch ? 0 : (isVictory ? Math.round(20 * (matchData?.fameMultiplier || 1)) : -5);
 
   return (
     <div className="text-center">
@@ -658,8 +711,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         </div>
       </div>
 
+      {isTournamentMatch && (
+        <div className="mb-4 text-sm text-roman-marble-500">
+          Tournament rewards will be awarded when advancing to the next round
+        </div>
+      )}
+
       <Button variant="gold" className="w-full" onClick={onClose}>
-        Return to Arena
+        {isTournamentMatch ? 'Return to Tournament' : 'Return to Arena'}
       </Button>
     </div>
   );

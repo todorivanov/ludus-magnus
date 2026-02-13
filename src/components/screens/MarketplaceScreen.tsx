@@ -4,15 +4,17 @@ import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { refreshMarket, purchaseGladiator } from '@features/gladiators/gladiatorsSlice';
 import { spendGold, addResource, consumeResource } from '@features/player/playerSlice';
 import { incrementObjective } from '@features/quests/questsSlice';
+import { purchaseItem, initializeStock } from '@features/marketplace/marketplaceSlice';
 import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@components/ui';
 import { generateMarketPool } from '@utils/gladiatorGenerator';
 import { GLADIATOR_CLASSES, GLADIATOR_ORIGINS } from '@data/gladiatorClasses';
 import { getQuestById } from '@data/quests';
-import type { Gladiator, Resources } from '@/types';
+import { ALL_MARKET_ITEMS, CATEGORY_INFO, getAvailableItems, type MarketItem } from '@data/marketplace';
+import type { Gladiator, Resources, MarketItemCategory } from '@/types';
 import { clsx } from 'clsx';
 
-type MarketTab = 'gladiators' | 'resources';
+type MarketTab = 'gladiators' | 'resources' | MarketItemCategory;
 
 const MARKET_REFRESH_INTERVAL = 10; // Days between automatic refreshes
 const MANUAL_REFRESH_COST = 100; // Gold cost to manually refresh
@@ -20,15 +22,18 @@ const MANUAL_REFRESH_COST = 100; // Gold cost to manually refresh
 export const MarketplaceScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { gold, resources } = useAppSelector(state => state.player);
+  const { ludusFame } = useAppSelector(state => state.fame);
   const gladiatorsState = useAppSelector(state => state.gladiators);
   const marketPool = gladiatorsState?.marketPool || [];
   const lastMarketRefresh = gladiatorsState?.lastMarketRefresh || 0;
   const { marketPrices } = useAppSelector(state => state.economy);
   const { currentDay } = useAppSelector(state => state.game);
   const { activeQuests } = useAppSelector(state => state.quests);
+  const { itemStock, purchasedItems } = useAppSelector(state => state.marketplace);
   
   const [activeTab, setActiveTab] = useState<MarketTab>('gladiators');
   const [selectedGladiator, setSelectedGladiator] = useState<Gladiator | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null);
   const [resourceAmounts, setResourceAmounts] = useState<Record<keyof Resources, number>>({
     grain: 10,
     water: 10,
@@ -41,6 +46,22 @@ export const MarketplaceScreen: React.FC = () => {
   // Calculate days until next refresh
   const daysUntilRefresh = MARKET_REFRESH_INTERVAL - (currentDay - lastMarketRefresh);
   const shouldAutoRefresh = currentDay - lastMarketRefresh >= MARKET_REFRESH_INTERVAL;
+
+  // Get available marketplace items based on fame
+  const availableItems = getAvailableItems(ludusFame);
+
+  // Initialize item stock on first load
+  useEffect(() => {
+    if (Object.keys(itemStock).length === 0) {
+      const initialStock: Record<string, number> = {};
+      Object.values(ALL_MARKET_ITEMS).forEach(item => {
+        if (item.stock !== undefined) {
+          initialStock[item.id] = item.stock;
+        }
+      });
+      dispatch(initializeStock(initialStock));
+    }
+  }, [dispatch, itemStock]);
 
   // Generate market pool on first load or auto-refresh every 10 days
   useEffect(() => {
@@ -140,6 +161,42 @@ export const MarketplaceScreen: React.FC = () => {
     }
   };
 
+  const handleBuyMarketItem = (item: MarketItem) => {
+    // Check if item is available
+    if (item.minFame && ludusFame < item.minFame) {
+      return; // Not enough fame
+    }
+
+    // Check stock
+    if (item.stock !== undefined) {
+      const currentStock = itemStock[item.id] ?? item.stock;
+      if (currentStock <= 0) {
+        return; // Out of stock
+      }
+    }
+
+    // Check gold
+    if (gold < item.price) {
+      return; // Not enough gold
+    }
+
+    // Purchase item
+    dispatch(spendGold({
+      amount: item.price,
+      description: `Purchased: ${item.name}`,
+      category: 'item',
+      day: currentDay,
+    }));
+
+    dispatch(purchaseItem({
+      itemId: item.id,
+      purchaseDay: currentDay,
+      quantity: 1,
+    }));
+
+    setSelectedItem(null);
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
@@ -206,11 +263,11 @@ export const MarketplaceScreen: React.FC = () => {
         </motion.div>
 
         {/* Tabs */}
-        <motion.div variants={itemVariants} className="flex gap-2">
+        <motion.div variants={itemVariants} className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('gladiators')}
             className={clsx(
-              'px-6 py-3 font-roman uppercase tracking-wide rounded-t-lg transition-all',
+              'px-4 py-2 font-roman uppercase tracking-wide rounded-t-lg transition-all text-sm',
               activeTab === 'gladiators'
                 ? 'bg-roman-marble-800 text-roman-gold-400 border-t-2 border-x-2 border-roman-gold-600'
                 : 'bg-roman-marble-900 text-roman-marble-400 hover:text-roman-marble-200'
@@ -221,7 +278,7 @@ export const MarketplaceScreen: React.FC = () => {
           <button
             onClick={() => setActiveTab('resources')}
             className={clsx(
-              'px-6 py-3 font-roman uppercase tracking-wide rounded-t-lg transition-all',
+              'px-4 py-2 font-roman uppercase tracking-wide rounded-t-lg transition-all text-sm',
               activeTab === 'resources'
                 ? 'bg-roman-marble-800 text-roman-gold-400 border-t-2 border-x-2 border-roman-gold-600'
                 : 'bg-roman-marble-900 text-roman-marble-400 hover:text-roman-marble-200'
@@ -229,6 +286,20 @@ export const MarketplaceScreen: React.FC = () => {
           >
             📦 Resources
           </button>
+          {Object.entries(CATEGORY_INFO).map(([category, info]) => (
+            <button
+              key={category}
+              onClick={() => setActiveTab(category as MarketItemCategory)}
+              className={clsx(
+                'px-4 py-2 font-roman uppercase tracking-wide rounded-t-lg transition-all text-sm',
+                activeTab === category
+                  ? 'bg-roman-marble-800 text-roman-gold-400 border-t-2 border-x-2 border-roman-gold-600'
+                  : 'bg-roman-marble-900 text-roman-marble-400 hover:text-roman-marble-200'
+              )}
+            >
+              {info.icon} {info.name}
+            </button>
+          ))}
         </motion.div>
 
         {/* Content */}
@@ -355,6 +426,72 @@ export const MarketplaceScreen: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Marketplace Items Content */}
+        {activeTab !== 'gladiators' && activeTab !== 'resources' && (
+          <div className="grid grid-cols-3 gap-4">
+            {/* Items List */}
+            <div className="col-span-2 space-y-3">
+              {availableItems
+                .filter(item => item.category === activeTab)
+                .length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <p className="text-roman-marble-400">No items available in this category yet.</p>
+                    {CATEGORY_INFO[activeTab as MarketItemCategory] && (
+                      <p className="text-xs text-roman-marble-500 mt-2">
+                        {CATEGORY_INFO[activeTab as MarketItemCategory].description}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                availableItems
+                  .filter(item => item.category === activeTab)
+                  .map((item) => {
+                    const currentStock = item.stock !== undefined ? (itemStock[item.id] ?? item.stock) : undefined;
+                    const isOutOfStock = currentStock !== undefined && currentStock <= 0;
+                    const canAfford = gold >= item.price && !isOutOfStock;
+                    const owned = purchasedItems.find(p => p.itemId === item.id)?.quantity || 0;
+
+                    return (
+                      <MarketItemCard
+                        key={item.id}
+                        item={item}
+                        isSelected={selectedItem?.id === item.id}
+                        canAfford={canAfford}
+                        currentStock={currentStock}
+                        owned={owned}
+                        onClick={() => setSelectedItem(item)}
+                        onBuy={() => handleBuyMarketItem(item)}
+                      />
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Selected Item Details */}
+            <div>
+              {selectedItem ? (
+                <MarketItemDetails
+                  item={selectedItem}
+                  canAfford={gold >= selectedItem.price}
+                  currentStock={selectedItem.stock !== undefined ? (itemStock[selectedItem.id] ?? selectedItem.stock) : undefined}
+                  owned={purchasedItems.find(p => p.itemId === selectedItem.id)?.quantity || 0}
+                  onBuy={() => handleBuyMarketItem(selectedItem)}
+                />
+              ) : (
+                <Card className="h-full flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <p className="text-roman-marble-500">
+                      Select an item to view details
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         )}
       </motion.div>
@@ -571,3 +708,231 @@ const StatBar: React.FC<{ label: string; value: number }> = ({ label, value }) =
     <div className="w-8 text-xs text-roman-marble-300 text-right">{value}</div>
   </div>
 );
+
+// Market Item Card Component
+interface MarketItemCardProps {
+  item: MarketItem;
+  isSelected: boolean;
+  canAfford: boolean;
+  currentStock?: number;
+  owned: number;
+  onClick: () => void;
+  onBuy: () => void;
+}
+
+const MarketItemCard: React.FC<MarketItemCardProps> = ({
+  item,
+  isSelected,
+  canAfford,
+  currentStock,
+  owned,
+  onClick,
+  onBuy,
+}) => {
+  const isOutOfStock = currentStock !== undefined && currentStock <= 0;
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      onClick={onClick}
+      className={clsx(
+        'card-roman cursor-pointer transition-all',
+        isSelected && 'ring-2 ring-roman-gold-500'
+      )}
+    >
+      <div className="flex items-center gap-4">
+        {/* Icon */}
+        <div className="text-4xl w-16 h-16 flex items-center justify-center bg-roman-marble-700 rounded-lg">
+          {item.icon}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-roman text-lg text-roman-marble-100">{item.name}</span>
+            {item.minFame && (
+              <span className="text-xs px-2 py-0.5 bg-roman-gold-900 rounded text-roman-gold-400">
+                {item.minFame} fame
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-roman-marble-400 line-clamp-2">
+            {item.description}
+          </div>
+          <div className="flex gap-3 mt-2 text-xs">
+            {currentStock !== undefined && (
+              <span className={clsx(
+                isOutOfStock ? 'text-roman-crimson-400' : 'text-roman-marble-500'
+              )}>
+                Stock: {currentStock}
+              </span>
+            )}
+            {owned > 0 && (
+              <span className="text-health-high">
+                Owned: {owned}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Price & Buy */}
+        <div className="text-right">
+          <div className={clsx(
+            'font-roman text-xl',
+            canAfford ? 'text-roman-gold-400' : 'text-roman-crimson-500'
+          )}>
+            {item.price}g
+          </div>
+          <Button
+            variant={canAfford && !isOutOfStock ? 'gold' : 'ghost'}
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onBuy(); }}
+            disabled={!canAfford || isOutOfStock}
+            className="mt-2"
+          >
+            {isOutOfStock ? 'Out of Stock' : canAfford ? 'Buy' : 'Cannot Afford'}
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Market Item Details Panel
+interface MarketItemDetailsProps {
+  item: MarketItem;
+  canAfford: boolean;
+  currentStock?: number;
+  owned: number;
+  onBuy: () => void;
+}
+
+const MarketItemDetails: React.FC<MarketItemDetailsProps> = ({
+  item,
+  canAfford,
+  currentStock,
+  owned,
+  onBuy,
+}) => {
+  const isOutOfStock = currentStock !== undefined && currentStock <= 0;
+  const effectTypeLabels: Record<string, string> = {
+    stat_boost: 'Stat Boost',
+    heal: 'Healing',
+    morale_boost: 'Morale Boost',
+    injury_heal: 'Injury Treatment',
+    xp_boost: 'Experience',
+    skill_point: 'Skill Point',
+    training_boost: 'Training Boost',
+    combat_buff: 'Combat Buff',
+    fame_boost: 'Fame Boost',
+    equipment: 'Equipment',
+  };
+
+  return (
+    <Card variant="gold">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <span className="text-4xl">{item.icon}</span>
+          <div>
+            <CardTitle>{item.name}</CardTitle>
+            <div className="text-sm text-roman-marble-400">
+              {CATEGORY_INFO[item.category].name}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Description */}
+        <div>
+          <div className="text-xs text-roman-marble-500 uppercase mb-1">Description</div>
+          <div className="text-roman-marble-200 text-sm">{item.description}</div>
+        </div>
+
+        {/* Effect */}
+        <div>
+          <div className="text-xs text-roman-marble-500 uppercase mb-2">Effect</div>
+          <div className="space-y-1">
+            <div className="text-roman-marble-200">
+              {effectTypeLabels[item.effect.type] || item.effect.type}
+            </div>
+            {item.effect.value && (
+              <div className="text-sm text-health-high">
+                +{item.effect.value} {item.effect.stat || ''}
+              </div>
+            )}
+            {item.effect.duration && (
+              <div className="text-xs text-roman-marble-400">
+                Duration: {item.effect.duration} days
+              </div>
+            )}
+            {item.effect.quality && (
+              <div className={clsx(
+                'text-xs uppercase font-roman',
+                item.effect.quality === 'legendary' ? 'text-roman-gold-400' :
+                item.effect.quality === 'rare' ? 'text-health-high' :
+                'text-roman-marble-400'
+              )}>
+                {item.effect.quality}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Requirements */}
+        {item.minFame && (
+          <div>
+            <div className="text-xs text-roman-marble-500 uppercase mb-1">Requirements</div>
+            <div className="text-sm text-roman-marble-300">
+              Ludus Fame: {item.minFame}
+            </div>
+          </div>
+        )}
+
+        {/* Stock */}
+        {currentStock !== undefined && (
+          <div>
+            <div className="text-xs text-roman-marble-500 uppercase mb-1">Availability</div>
+            <div className={clsx(
+              'text-sm',
+              isOutOfStock ? 'text-roman-crimson-400' : 'text-roman-marble-300'
+            )}>
+              Stock: {currentStock}
+            </div>
+          </div>
+        )}
+
+        {/* Owned */}
+        {owned > 0 && (
+          <div>
+            <div className="text-xs text-roman-marble-500 uppercase mb-1">Inventory</div>
+            <div className="text-sm text-health-high">
+              You own: {owned}
+            </div>
+          </div>
+        )}
+
+        {/* Price */}
+        <div className="divider-roman" />
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs text-roman-marble-500">Price</div>
+            <div className={clsx(
+              'font-roman text-2xl',
+              canAfford && !isOutOfStock ? 'text-roman-gold-400' : 'text-roman-crimson-500'
+            )}>
+              {item.price}g
+            </div>
+          </div>
+          <Button
+            variant={canAfford && !isOutOfStock ? 'gold' : 'crimson'}
+            size="lg"
+            onClick={onBuy}
+            disabled={!canAfford || isOutOfStock}
+          >
+            {isOutOfStock ? 'Out of Stock' : canAfford ? 'Purchase' : 'Insufficient Gold'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

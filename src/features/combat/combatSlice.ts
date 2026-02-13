@@ -22,6 +22,8 @@ interface CombatState {
   matchType: string;
   rules: 'submission' | 'death' | 'first_blood';
   maxRounds: number;
+  // Tournament context
+  tournamentMatchId?: string;
 }
 
 const initialState: CombatState = {
@@ -69,12 +71,14 @@ const combatSlice = createSlice({
       matchType: string;
       rules: 'submission' | 'death' | 'first_blood';
       maxRounds: number;
+      tournamentMatchId?: string;
     }>) => {
       state.gladiator = action.payload.gladiator;
       state.opponent = action.payload.opponent;
       state.matchType = action.payload.matchType;
       state.rules = action.payload.rules;
       state.maxRounds = action.payload.maxRounds;
+      state.tournamentMatchId = action.payload.tournamentMatchId;
       state.isInCombat = true;
       state.currentTurn = 1;
     },
@@ -84,6 +88,7 @@ const combatSlice = createSlice({
       state.matchType = '';
       state.isInCombat = false;
       state.currentTurn = 0;
+      state.tournamentMatchId = undefined;
     },
     executeAction: (state, _action: PayloadAction<{ action: string }>) => {
       // Action execution is handled by the CombatEngine

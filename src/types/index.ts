@@ -16,6 +16,7 @@ export type GameScreen =
   | 'marketplace' 
   | 'arena' 
   | 'combat'
+  | 'tournaments'
   | 'staff'
   | 'fame'
   | 'politics'
@@ -130,7 +131,21 @@ export type BuildingType =
   | 'waterWell'        // Water supply
   | 'walls'            // Security
   | 'grainShelter'     // Grain storage
-  | 'wineCellar';      // Wine storage
+  | 'wineCellar'       // Wine storage
+  // New buildings
+  | 'gymnasium'        // Advanced training
+  | 'arenaReplica'     // Practice arena
+  | 'library'          // Tactical knowledge
+  | 'forge'            // Weapon crafting
+  | 'guardTower'       // Enhanced security
+  | 'barracks'         // Staff housing
+  | 'marketplace'      // Income generation
+  | 'spectatorSeats'   // Fame generation
+  | 'beastPens'        // Beast training
+  | 'oilPress'         // Oil production
+  | 'triclinium'       // Dining hall
+  | 'hypocaust'        // Heating system
+  | 'ludusOffice';     // Administration
 
 export interface BuildingBonus {
   stat: string;
@@ -250,6 +265,65 @@ export interface Transaction {
 }
 
 // ==========================================
+// MARKETPLACE ITEM TYPES
+// ==========================================
+
+export type MarketItemCategory = 
+  | 'equipment'      // Weapons, armor
+  | 'consumables'    // Potions, tonics
+  | 'training'       // Training manuals, skill scrolls
+  | 'luxury'         // Morale boosters
+  | 'beasts'         // Animals for training/entertainment
+  | 'services';      // Special services
+
+export interface MarketItemEffect {
+  type: 
+    | 'stat_boost'           // Permanent stat increase
+    | 'heal'                 // HP/Stamina recovery
+    | 'morale_boost'         // Morale increase
+    | 'injury_heal'          // Reduce injury recovery time
+    | 'xp_boost'             // Grant XP
+    | 'skill_point'          // Grant skill points
+    | 'training_boost'       // Temporary training efficiency
+    | 'combat_buff'          // Temporary combat bonus
+    | 'fame_boost'           // Instant fame
+    | 'equipment';           // Equippable gear
+
+  value?: number;
+  stat?: keyof GladiatorStats;
+  duration?: number; // For temporary effects (in days)
+  quality?: 'common' | 'rare' | 'legendary';
+}
+
+export interface MarketItem {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: MarketItemCategory;
+  price: number;
+  stock?: number; // Limited quantity, undefined = unlimited
+  minFame?: number; // Ludus fame requirement to unlock
+  effect: MarketItemEffect;
+}
+
+export interface PurchasedItem {
+  itemId: string;
+  purchaseDay: number;
+  quantity: number;
+  appliedTo?: string[]; // Gladiator IDs for items applied to specific gladiators
+}
+
+export interface ActiveEffect {
+  id: string;
+  itemId: string;
+  gladiatorId?: string; // If effect applies to specific gladiator
+  type: string;
+  value: number;
+  expiresOnDay?: number;
+}
+
+// ==========================================
 // FACTION TYPES
 // ==========================================
 
@@ -322,4 +396,90 @@ export interface PlayerState {
   ludusFame: number;  // 0-1000
   resources: Resources;
   transactions: Transaction[];
+}
+
+// ==========================================
+// TOURNAMENT TYPES
+// ==========================================
+
+export type TournamentSize = 8 | 16 | 32;
+export type TournamentRules = 'submission' | 'death';
+
+export interface TournamentTypeData {
+  id: string;
+  name: string;
+  description: string;
+  size: TournamentSize;
+  rules: TournamentRules;
+  entryFeePerGladiator: number;
+  minFame: number;
+  stageRewards: {
+    roundOf32?: { gold: number; fame: number };
+    roundOf16?: { gold: number; fame: number };
+    quarterfinals: { gold: number; fame: number };
+    semifinals: { gold: number; fame: number };
+    finals: { gold: number; fame: number };
+  };
+  placementBonuses: {
+    winner: { gold: number; fame: number; ludusFame: number };
+    runnerUp: { gold: number; fame: number; ludusFame: number };
+  };
+}
+
+export interface TournamentParticipant {
+  id: string;
+  name: string;
+  isPlayerGladiator: boolean;
+  gladiatorId?: string;
+  class: GladiatorClass;
+  level: number;
+  stats: GladiatorStats;
+  currentHP: number;
+  maxHP: number;
+  currentStamina: number;
+  maxStamina: number;
+  eliminated: boolean;
+  died: boolean;
+  roundEliminated?: number;
+}
+
+export interface BracketMatch {
+  id: string;
+  round: number;
+  position: number;
+  participant1: TournamentParticipant | null;
+  participant2: TournamentParticipant | null;
+  winner: TournamentParticipant | null;
+  completed: boolean;
+  needsPlayerAction: boolean;
+  combatLog?: CombatLogEntry[];
+}
+
+export interface Tournament {
+  id: string;
+  type: string;
+  typeData: TournamentTypeData;
+  startDay: number;
+  currentRound: number;
+  bracket: BracketMatch[];
+  participants: TournamentParticipant[];
+  playerGladiatorIds: string[];
+  rules: TournamentRules;
+  status: 'active' | 'completed';
+}
+
+export interface CompletedTournament {
+  id: string;
+  type: string;
+  startDay: number;
+  completionDay: number;
+  playerResults: {
+    gladiatorId: string;
+    gladiatorName: string;
+    roundReached: number;
+    died: boolean;
+    won: boolean;
+  }[];
+  totalGoldEarned: number;
+  totalFameEarned: number;
 }

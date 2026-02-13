@@ -8,6 +8,8 @@ import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button, Modal, ProgressBar } from '@components/ui';
 import { MATCH_TYPES, generateOpponent } from '@data/combat';
 import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
+import { TournamentsScreen } from './TournamentsScreen';
+import { BracketView } from '@components/tournaments/BracketView';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
 
@@ -16,7 +18,9 @@ export const ArenaScreen: React.FC = () => {
   const { roster } = useAppSelector(state => state.gladiators);
   const { gold } = useAppSelector(state => state.player);
   const { currentDay } = useAppSelector(state => state.game);
+  const { activeTournament } = useAppSelector(state => state.tournaments);
 
+  const [activeTab, setActiveTab] = useState<'fights' | 'tournaments'>('fights');
   const [selectedGladiator, setSelectedGladiator] = useState<Gladiator | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -75,6 +79,15 @@ export const ArenaScreen: React.FC = () => {
     setShowConfirmModal(false);
   };
 
+  // If there's an active tournament, show the bracket view instead
+  if (activeTournament) {
+    return (
+      <MainLayout>
+        <BracketView />
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <motion.div
@@ -88,11 +101,51 @@ export const ArenaScreen: React.FC = () => {
             The Arena
           </h1>
           <p className="text-roman-marble-400">
-            Select a gladiator and enter the games. Glory and gold await!
+            Fight for glory, gold, and eternal fame in the arena!
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-roman-stone-700">
+          <button
+            onClick={() => setActiveTab('fights')}
+            className={clsx(
+              'px-6 py-3 font-semibold transition-colors relative',
+              activeTab === 'fights'
+                ? 'text-roman-gold-400'
+                : 'text-roman-marble-500 hover:text-roman-marble-300'
+            )}
+          >
+            Regular Fights
+            {activeTab === 'fights' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-roman-gold-400"
+              />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('tournaments')}
+            className={clsx(
+              'px-6 py-3 font-semibold transition-colors relative',
+              activeTab === 'tournaments'
+                ? 'text-roman-gold-400'
+                : 'text-roman-marble-500 hover:text-roman-marble-300'
+            )}
+          >
+            🏆 Tournaments
+            {activeTab === 'tournaments' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-roman-gold-400"
+              />
+            )}
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'fights' ? (
+          <div className="grid grid-cols-3 gap-6">
           {/* Gladiator Selection */}
           <div className="col-span-1">
             <Card>
@@ -158,6 +211,9 @@ export const ArenaScreen: React.FC = () => {
             </Card>
           </div>
         </div>
+        ) : (
+          <TournamentsScreen />
+        )}
 
         {/* Confirm Modal */}
         <Modal

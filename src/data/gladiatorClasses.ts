@@ -250,6 +250,11 @@ export const ROMAN_FIRST_NAMES = [
   'Aulus', 'Decimus', 'Spurius', 'Manius', 'Servius', 'Appius', 'Numerius',
   'Tiberius', 'Vibius', 'Statius', 'Faustus', 'Caeso', 'Octavius', 'Crassus',
   'Drusus', 'Nero', 'Varro', 'Felix', 'Magnus', 'Maximus', 'Rufus', 'Brutus',
+  'Julius', 'Claudius', 'Augustus', 'Antonius', 'Aurelius', 'Flavius', 'Valerius',
+  'Cornelius', 'Cassius', 'Scipio', 'Marius', 'Sulla', 'Pompey', 'Gracchus', 'Cato',
+  'Severus', 'Hadrian', 'Trajan', 'Commodus', 'Pertinax', 'Didius', 'Septimus',
+  'Caracalla', 'Geta', 'Macrinus', 'Heliogabalus', 'Alexander', 'Probus', 'Aurelian',
+  'Diocletian', 'Constantius', 'Valentinian', 'Theodosius', 'Honorius', 'Arcadius',
 ];
 
 export const ROMAN_COGNOMENS = [
@@ -257,12 +262,39 @@ export const ROMAN_COGNOMENS = [
   'Ferox', 'Invictus', 'Triumphator', 'Victor', 'Pugnax', 'Audax', 'Fortis',
   'Celer', 'Agilis', 'Rapax', 'Cruentus', 'Mortifer', 'Bellator', 'Gladius',
   'Scutum', 'Fulmen', 'Tempestas', 'Ursus', 'Leo', 'Lupus', 'Aquila', 'Draco',
+  'Magnus', 'Maximus', 'Severus', 'Augustus', 'Pius', 'Felix', 'Nobilis', 'Strenuus',
+  'Validus', 'Impavidus', 'Ferus', 'Saevus', 'Atrox', 'Acer', 'Durus', 'Rigidus',
+  'Ferrus', 'Adamantius', 'Titanicus', 'Colossus', 'Gigantus', 'Brutalis', 'Carnifex',
+  'Sanguis', 'Letalis', 'Fatalis', 'Exitium', 'Ruina', 'Vastator', 'Flagellum',
+  'Panthera', 'Tigris', 'Vipera', 'Serpens', 'Scorpius', 'Corvus', 'Milvus', 'Vultur',
 ];
 
 // Non-Roman names for POWs and slaves
 export const FOREIGN_NAMES = [
+  // Spartacus series inspired
   'Spartacus', 'Crixus', 'Oenomaus', 'Gannicus', 'Castus', 'Batiatus',
   'Theokoles', 'Caburus', 'Pericles', 'Agron', 'Duro', 'Vettius', 'Solonius',
   'Barca', 'Auctus', 'Rhaskos', 'Hamilcar', 'Nasir', 'Ashur', 'Doctore',
   'Ixion', 'Segovax', 'Sedullus', 'Nemetes', 'Lugo', 'Saxa', 'Mira', 'Naevia',
+  // Thracian names
+  'Bithys', 'Diegis', 'Drenis', 'Rhesus', 'Sitalces', 'Seuthes', 'Cotys', 'Teres',
+  'Rhemaxos', 'Amadocus', 'Bendis', 'Zalmodegicus', 'Raskuporis', 'Skostokos',
+  // Gallic/Celtic names
+  'Brennus', 'Vercingetorix', 'Ambiorix', 'Caratacus', 'Boudicca', 'Diviciacus',
+  'Dumnorix', 'Caturix', 'Bellovesus', 'Segovax', 'Cunobeline', 'Togodumnus',
+  'Cassivellaunus', 'Commius', 'Teutomatus', 'Litaviccus', 'Eporedorix', 'Viridomarus',
+  // Germanic names
+  'Arminius', 'Thusnelda', 'Segestes', 'Inguiomerus', 'Maroboduus', 'Catualda',
+  'Varus', 'Segimerus', 'Chariovalda', 'Flavus', 'Italicus', 'Vannius',
+  // Greek/Hellenistic names
+  'Leonidas', 'Achilles', 'Hector', 'Ajax', 'Diomedes', 'Odysseus', 'Perseus',
+  'Theseus', 'Heracles', 'Cadmus', 'Bellerophon', 'Orion', 'Castor', 'Pollux',
+  // North African/Carthaginian names
+  'Hannibal', 'Hasdrubal', 'Hamilcar', 'Mago', 'Adherbal', 'Bomilcar', 'Gisco',
+  'Sophonisba', 'Syphax', 'Masinissa', 'Jugurtha', 'Micipsa', 'Adherbal',
+  // Egyptian names
+  'Ptolemy', 'Cleopatra', 'Berenice', 'Arsinoe', 'Nectanebo', 'Psamtik', 'Amasis',
+  // Persian/Eastern names
+  'Darius', 'Xerxes', 'Artaxerxes', 'Cyrus', 'Cambyses', 'Mithridates', 'Tigranes',
+  'Phraates', 'Orodes', 'Vardanes', 'Vologases', 'Pacorus', 'Surena',
 ];

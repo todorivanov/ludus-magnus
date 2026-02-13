@@ -8,6 +8,7 @@ export { TrainingScreen } from './TrainingScreen';
 export { StaffScreen } from './StaffScreen';
 export { ArenaScreen } from './ArenaScreen';
 export { CombatScreen } from './CombatScreen';
+export { TournamentsScreen } from './TournamentsScreen';
 export { FameScreen } from './FameScreen';
 export { PoliticsScreen } from './PoliticsScreen';
 export { QuestsScreen } from './QuestsScreen';

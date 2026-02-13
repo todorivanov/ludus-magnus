@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { selectGladiator, sellGladiator, setTraining, setResting, type DeadGladiator } from '@features/gladiators/gladiatorsSlice';
+import { selectGladiator, sellGladiator, setTraining, setResting, updateGladiator, type DeadGladiator } from '@features/gladiators/gladiatorsSlice';
 import { setScreen } from '@features/game/gameSlice';
 import { addGold } from '@features/player/playerSlice';
 import { MainLayout } from '@components/layout';
-import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal, useToast } from '@components/ui';
+import { ItemInventoryModal } from '@components/marketplace/ItemInventoryModal';
 import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
 import { calculateSellValue } from '@utils/gladiatorGenerator';
 import type { Gladiator } from '@/types';
@@ -15,6 +16,7 @@ type TabType = 'roster' | 'fallen';
 
 export const GladiatorsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
+  const { addToast } = useToast();
   const gladiatorsState = useAppSelector(state => state.gladiators);
   const roster = gladiatorsState?.roster || [];
   const deadGladiators = gladiatorsState?.deadGladiators || [];
@@ -25,6 +27,7 @@ export const GladiatorsScreen: React.FC = () => {
   const [showSellModal, setShowSellModal] = useState(false);
   const [gladiatorToSell, setGladiatorToSell] = useState<Gladiator | null>(null);
   const [selectedFallen, setSelectedFallen] = useState<DeadGladiator | null>(null);
+  const [showItemModal, setShowItemModal] = useState(false);
 
   const selectedGladiator = roster.find(g => g.id === selectedGladiatorId);
 
@@ -61,6 +64,25 @@ export const GladiatorsScreen: React.FC = () => {
 
   const handleToggleResting = (gladiator: Gladiator) => {
     dispatch(setResting({ id: gladiator.id, isResting: !gladiator.isResting }));
+  };
+
+  const handleUseItem = () => {
+    if (selectedGladiator) {
+      setShowItemModal(true);
+    }
+  };
+
+  const handleApplyItem = (updatedGladiator: Gladiator, message: string) => {
+    dispatch(updateGladiator({ 
+      id: updatedGladiator.id, 
+      updates: updatedGladiator 
+    }));
+    addToast({
+      type: 'success',
+      title: 'Item Used',
+      message: message,
+    });
+    setShowItemModal(false);
   };
 
   const containerVariants = {
@@ -163,6 +185,7 @@ export const GladiatorsScreen: React.FC = () => {
                       onSell={() => handleSellClick(selectedGladiator)}
                       onToggleTraining={() => handleToggleTraining(selectedGladiator)}
                       onToggleResting={() => handleToggleResting(selectedGladiator)}
+                      onUseItem={handleUseItem}
                     />
                   ) : (
                     <Card className="h-96 flex items-center justify-center">
@@ -267,6 +290,16 @@ export const GladiatorsScreen: React.FC = () => {
             </div>
           )}
         </Modal>
+
+        {/* Item Inventory Modal */}
+        {selectedGladiator && (
+          <ItemInventoryModal
+            isOpen={showItemModal}
+            onClose={() => setShowItemModal(false)}
+            gladiator={selectedGladiator}
+            onApplyItem={handleApplyItem}
+          />
+        )}
       </motion.div>
     </MainLayout>
   );
@@ -363,6 +396,7 @@ interface GladiatorDetailPanelProps {
   onSell: () => void;
   onToggleTraining: () => void;
   onToggleResting: () => void;
+  onUseItem: () => void;
 }
 
 const GladiatorDetailPanel: React.FC<GladiatorDetailPanelProps> = ({
@@ -370,6 +404,7 @@ const GladiatorDetailPanel: React.FC<GladiatorDetailPanelProps> = ({
   onSell,
   onToggleTraining,
   onToggleResting,
+  onUseItem,
 }) => {
   const classData = GLADIATOR_CLASSES[gladiator.class];
 
@@ -492,6 +527,13 @@ const GladiatorDetailPanel: React.FC<GladiatorDetailPanelProps> = ({
             onClick={onToggleResting}
           >
             {gladiator.isResting ? '⏹ Stop Resting' : '😴 Rest & Recover'}
+          </Button>
+          <Button
+            variant="primary"
+            className="w-full"
+            onClick={onUseItem}
+          >
+            🎒 Use Item
           </Button>
           <Button
             variant="crimson"
