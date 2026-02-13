@@ -35,12 +35,34 @@ export const ItemInventoryModal: React.FC<ItemInventoryModalProps> = ({
     .filter(item => item !== undefined) as (MarketItem & { quantity: number })[];
 
   const handleUseItem = (item: MarketItem) => {
+    // Check if gladiator already has this equipment
+    if (item.effect.type === 'equipment' && gladiator.equippedItems?.includes(item.id)) {
+      // Already equipped, show message
+      onApplyItem(gladiator, `${item.name} is already equipped on ${gladiator.name}!`);
+      setSelectedItem(null);
+      return;
+    }
+
     // Apply the item effect
     const result = applyItemToGladiator(gladiator, item, currentDay);
 
-    // Dispatch to marketplace slice to track the effect
+    // Dispatch to marketplace slice to track the effect (for temporary buffs)
     if (result.effect) {
       dispatch(applyItemEffect(result.effect));
+    } else if (item.effect.type !== 'equipment') {
+      // For items without temporary effects (healing, XP, stat boosts, etc.)
+      // Equipment items are NOT consumed, they're equipped
+      // We need to manually reduce the quantity for non-equipment items
+      const purchased = purchasedItems.find(p => p.itemId === item.id);
+      if (purchased && purchased.quantity > 0) {
+        // Reduce quantity by dispatching a consumption action
+        dispatch(applyItemEffect({
+          id: `consume-${Date.now()}`,
+          itemId: item.id,
+          type: 'consumed',
+          value: 0,
+        }));
+      }
     }
 
     // Update the gladiator through parent component

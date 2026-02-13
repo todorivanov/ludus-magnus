@@ -1,44 +1,7 @@
-import type { GladiatorStats } from '@/types';
+import type { MarketItemEffect, MarketItem, MarketItemCategory } from '@/types';
 
-// Marketplace item types
-export type MarketItemCategory = 
-  | 'equipment'      // Weapons, armor
-  | 'consumables'    // Potions, tonics
-  | 'training'       // Training manuals, skill scrolls
-  | 'luxury'         // Morale boosters
-  | 'beasts'         // Animals for training/entertainment
-  | 'services';      // Special services
-
-export interface MarketItem {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: MarketItemCategory;
-  price: number;
-  stock?: number; // Limited quantity, undefined = unlimited
-  minFame?: number; // Ludus fame requirement to unlock
-  effect: MarketItemEffect;
-}
-
-export interface MarketItemEffect {
-  type: 
-    | 'stat_boost'           // Permanent stat increase
-    | 'heal'                 // HP/Stamina recovery
-    | 'morale_boost'         // Morale increase
-    | 'injury_heal'          // Reduce injury recovery time
-    | 'xp_boost'             // Grant XP
-    | 'skill_point'          // Grant skill points
-    | 'training_boost'       // Temporary training efficiency
-    | 'combat_buff'          // Temporary combat bonus
-    | 'fame_boost'           // Instant fame
-    | 'equipment';           // Equippable gear
-
-  value?: number;
-  stat?: keyof GladiatorStats;
-  duration?: number; // For temporary effects (in days)
-  quality?: 'common' | 'rare' | 'legendary';
-}
+// Re-export for convenience
+export type { MarketItemEffect, MarketItem, MarketItemCategory };
 
 // Equipment items
 export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
@@ -49,7 +12,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     icon: '🗡️',
     category: 'equipment',
     price: 50,
-    effect: { type: 'equipment', quality: 'common' },
+    effect: { type: 'equipment', quality: 'common', slot: 'weapon' },
   },
   
   gladius_masterwork: {
@@ -60,7 +23,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     category: 'equipment',
     price: 300,
     minFame: 100,
-    effect: { type: 'stat_boost', value: 3, stat: 'strength' },
+    effect: { type: 'stat_boost', value: 3, stat: 'strength', slot: 'weapon' },
   },
   
   scutum_reinforced: {
@@ -71,7 +34,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     category: 'equipment',
     price: 200,
     minFame: 50,
-    effect: { type: 'stat_boost', value: 5, stat: 'constitution' },
+    effect: { type: 'stat_boost', value: 5, stat: 'constitution', slot: 'shield' },
   },
   
   arena_champion_gear: {
@@ -83,7 +46,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     price: 1500,
     stock: 1,
     minFame: 500,
-    effect: { type: 'equipment', quality: 'legendary' },
+    effect: { type: 'equipment', quality: 'legendary', slot: 'armor' },
   },
   
   training_weights: {
@@ -93,7 +56,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     icon: '🏋️',
     category: 'equipment',
     price: 100,
-    effect: { type: 'stat_boost', value: 2, stat: 'strength' },
+    effect: { type: 'stat_boost', value: 2, stat: 'strength', slot: 'accessory' },
   },
   
   agility_sandals: {
@@ -104,7 +67,7 @@ export const EQUIPMENT_ITEMS: Record<string, MarketItem> = {
     category: 'equipment',
     price: 150,
     minFame: 75,
-    effect: { type: 'stat_boost', value: 3, stat: 'agility' },
+    effect: { type: 'stat_boost', value: 3, stat: 'agility', slot: 'accessory' },
   },
 };
 

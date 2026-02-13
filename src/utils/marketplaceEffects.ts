@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Gladiator, MarketItem, ActiveEffect } from '@/types';
+import { ALL_MARKET_ITEMS } from '@data/marketplace';
 
 /**
  * Apply marketplace item effects to a gladiator
@@ -17,6 +18,30 @@ export const applyItemToGladiator = (
   let effect: ActiveEffect | undefined;
   let message = '';
 
+  // Handle equipment items first (based on category, not effect type)
+  if (item.category === 'equipment' && item.effect.slot) {
+    if (!updatedGladiator.equippedItems) {
+      updatedGladiator.equippedItems = [];
+    }
+    
+    // Check if gladiator already has an item in this slot
+    const existingItemInSlot = updatedGladiator.equippedItems.find(itemId => {
+      const equippedItem = ALL_MARKET_ITEMS[itemId];
+      return equippedItem?.effect.slot === item.effect.slot;
+    });
+    
+    // If there's an existing item in this slot, replace it
+    if (existingItemInSlot) {
+      updatedGladiator.equippedItems = updatedGladiator.equippedItems.filter(
+        itemId => itemId !== existingItemInSlot
+      );
+      message = `${item.name} replaced previous ${item.effect.slot} and is now equipped!`;
+    }
+    
+    // Equip the new item
+    updatedGladiator.equippedItems.push(item.id);
+  }
+
   switch (item.effect.type) {
     case 'stat_boost':
       if (item.effect.stat) {
@@ -27,7 +52,12 @@ export const applyItemToGladiator = (
             updatedGladiator.stats[item.effect.stat] + (item.effect.value || 0)
           ),
         };
-        message = `${item.name} increased ${gladiator.name}'s ${item.effect.stat} by ${item.effect.value}!`;
+        // Different message for equipment vs consumables
+        if (item.category === 'equipment') {
+          message = `${item.name} equipped! ${gladiator.name}'s ${item.effect.stat} increased by ${item.effect.value}!`;
+        } else {
+          message = `${item.name} increased ${gladiator.name}'s ${item.effect.stat} by ${item.effect.value}!`;
+        }
       }
       break;
 
@@ -67,16 +97,23 @@ export const applyItemToGladiator = (
           message = `${item.name} completely healed ${gladiator.name}'s injury!`;
         } else {
           // Reduce recovery time
-          updatedGladiator.injuries = updatedGladiator.injuries.map((injury, index) => {
-            if (index === 0) {
-              return {
-                ...injury,
-                daysRemaining: Math.max(0, injury.daysRemaining - healValue),
-              };
-            }
-            return injury;
-          });
-          message = `${item.name} reduced ${gladiator.name}'s injury recovery time by ${healValue} days!`;
+          updatedGladiator.injuries = updatedGladiator.injuries
+            .map((injury, index) => {
+              if (index === 0) {
+                return {
+                  ...injury,
+                  daysRemaining: Math.max(0, injury.daysRemaining - healValue),
+                };
+              }
+              return injury;
+            })
+            // Filter out injuries that have reached 0 days remaining
+            .filter(injury => injury.daysRemaining > 0);
+          
+          const healedCompletely = updatedGladiator.injuries.length < gladiator.injuries.length;
+          message = healedCompletely 
+            ? `${item.name} completely healed ${gladiator.name}'s injury!`
+            : `${item.name} reduced ${gladiator.name}'s injury recovery time by ${healValue} days!`;
         }
         updatedGladiator.isInjured = updatedGladiator.injuries.length > 0;
       } else {
@@ -87,7 +124,23 @@ export const applyItemToGladiator = (
     case 'xp_boost':
       const xpGain = item.effect.value || 0;
       updatedGladiator.experience += xpGain;
-      message = `${item.name} granted ${gladiator.name} ${xpGain} experience points!`;
+      
+      // Auto level-up check
+      let levelsGained = 0;
+      const xpToLevel = updatedGladiator.level * 100;
+      while (updatedGladiator.experience >= xpToLevel && updatedGladiator.level < 20) {
+        updatedGladiator.experience -= xpToLevel;
+        updatedGladiator.level += 1;
+        updatedGladiator.skillPoints = (updatedGladiator.skillPoints || 0) + 5;
+        // Update derived stats on level up
+        updatedGladiator.maxHP = 50 + updatedGladiator.level * 10 + Math.round(updatedGladiator.stats.constitution * 2);
+        updatedGladiator.maxStamina = 50 + updatedGladiator.level * 5 + Math.round(updatedGladiator.stats.endurance * 1.5);
+        levelsGained++;
+      }
+      
+      message = levelsGained > 0
+        ? `${item.name} granted ${gladiator.name} ${xpGain} XP and ${levelsGained} level${levelsGained > 1 ? 's' : ''}!`
+        : `${item.name} granted ${gladiator.name} ${xpGain} experience points!`;
       break;
 
     case 'skill_point':
@@ -130,8 +183,8 @@ export const applyItemToGladiator = (
       break;
 
     case 'equipment':
+      // Equipment with no specific stat boost (e.g., basic items)
       message = `${item.name} equipped to ${gladiator.name}!`;
-      // Equipment effects are handled by stat boosts in the item definition
       break;
 
     default:

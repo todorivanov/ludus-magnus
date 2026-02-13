@@ -8,6 +8,7 @@ import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal, useToast } from '@components/ui';
 import { ItemInventoryModal } from '@components/marketplace/ItemInventoryModal';
 import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
+import { ALL_MARKET_ITEMS } from '@data/marketplace';
 import { calculateSellValue } from '@utils/gladiatorGenerator';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
@@ -316,7 +317,10 @@ const RosterCard: React.FC<RosterCardProps> = ({ gladiator, isSelected, onClick 
   const classData = GLADIATOR_CLASSES[gladiator.class];
 
   const getStatusBadge = () => {
-    if (gladiator.isInjured) return { text: 'Injured', color: 'bg-roman-crimson-600' };
+    if (gladiator.isInjured) {
+      const maxDays = Math.max(...gladiator.injuries.map(i => i.daysRemaining));
+      return { text: `Injured (${maxDays}d)`, color: 'bg-roman-crimson-600' };
+    }
     if (gladiator.isTraining) return { text: 'Training', color: 'bg-roman-bronze-600' };
     if (gladiator.isResting) return { text: 'Resting', color: 'bg-stamina-high' };
     return { text: 'Ready', color: 'bg-health-high' };
@@ -509,6 +513,83 @@ const GladiatorDetailPanel: React.FC<GladiatorDetailPanelProps> = ({
             <span className="text-roman-gold-400">{gladiator.fame}</span>
           </div>
         </div>
+
+        {/* Injuries */}
+        {gladiator.injuries && gladiator.injuries.length > 0 && (
+          <div>
+            <div className="text-xs text-roman-marble-500 uppercase mb-2">Injuries</div>
+            <div className="space-y-2">
+              {gladiator.injuries.map((injury) => (
+                <div 
+                  key={injury.id}
+                  className="bg-roman-crimson-900/30 border border-roman-crimson-600/50 rounded p-2"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-roman-marble-200">{injury.type}</span>
+                    <span className={clsx(
+                      'text-xs px-2 py-0.5 rounded font-roman',
+                      injury.severity === 'permanent' ? 'bg-roman-crimson-800 text-roman-crimson-200' :
+                      injury.severity === 'major' ? 'bg-roman-crimson-700 text-roman-crimson-100' :
+                      'bg-roman-crimson-600 text-white'
+                    )}>
+                      {injury.severity}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-roman-marble-400">
+                      Recovery: {injury.daysRemaining} day{injury.daysRemaining !== 1 ? 's' : ''} remaining
+                    </span>
+                    {Object.keys(injury.statPenalty).length > 0 && (
+                      <span className="text-health-low">
+                        {Object.entries(injury.statPenalty).map(([stat, value]) => 
+                          `${stat.slice(0, 3).toUpperCase()}: ${value > 0 ? '+' : ''}${value}`
+                        ).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Equipment */}
+        {gladiator.equippedItems && gladiator.equippedItems.length > 0 && (
+          <div>
+            <div className="text-xs text-roman-marble-500 uppercase mb-2">Equipment</div>
+            <div className="space-y-2">
+              {gladiator.equippedItems.map((itemId) => {
+                const item = ALL_MARKET_ITEMS[itemId];
+                if (!item) return null;
+                
+                return (
+                  <div 
+                    key={itemId}
+                    className="bg-roman-gold-900/20 border border-roman-gold-600/50 rounded p-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{item.icon}</span>
+                      <div className="flex-1">
+                        <div className="text-sm text-roman-marble-200">{item.name}</div>
+                        <div className="text-xs text-roman-marble-400">{item.description}</div>
+                      </div>
+                      {item.effect.quality && (
+                        <span className={clsx(
+                          'text-xs px-2 py-0.5 rounded font-roman uppercase',
+                          item.effect.quality === 'legendary' ? 'bg-roman-gold-600 text-white' :
+                          item.effect.quality === 'rare' ? 'bg-health-high text-white' :
+                          'bg-roman-marble-700 text-roman-marble-200'
+                        )}>
+                          {item.effect.quality}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="divider-roman" />

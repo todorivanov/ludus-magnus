@@ -185,26 +185,63 @@ export const generateMarketPool = (count: number = 6): Gladiator[] => {
   return pool.sort((a, b) => a.purchasePrice - b.purchasePrice);
 };
 
-// Calculate sell value (60-80% of current market value)
+// Calculate sell value (70-80% of current market value)
 export const calculateSellValue = (gladiator: Gladiator): number => {
   const baseValue = gladiator.purchasePrice;
   
-  // Fame bonus
-  const fameBonus = gladiator.fame * 0.5;
+  // Level bonus - significant increase per level (compound value)
+  const levelBonus = (gladiator.level - 1) * 50 * gladiator.level;
   
-  // Level bonus
-  const levelBonus = (gladiator.level - 1) * 20;
+  // Experience bonus - partial credit for progress toward next level
+  const xpTowardNext = gladiator.experience % (gladiator.level * 100);
+  const xpBonus = Math.floor(xpTowardNext / 10);
   
-  // Win record bonus
-  const winBonus = gladiator.wins * 5;
+  // Stats bonus - reward for trained stats (total stats above base)
+  const totalStats = Object.values(gladiator.stats).reduce((sum, stat) => sum + stat, 0);
+  const statsBonus = Math.max(0, (totalStats - 250) * 2); // Assuming ~50 average base stat
   
-  // Injury penalty
-  const injuryPenalty = gladiator.injuries.length * 20;
+  // Skills bonus - unlocked skills are valuable
+  const skillsBonus = gladiator.skillPoints * 30;
   
-  const currentValue = baseValue + fameBonus + levelBonus + winBonus - injuryPenalty;
+  // Fame bonus - reputation increases value
+  const fameBonus = gladiator.fame * 1.0;
   
-  // Sell at 60-80% of value
-  const sellPercentage = 0.6 + (Math.random() * 0.2);
+  // Combat record bonus
+  const winBonus = gladiator.wins * 10;
+  const killBonus = gladiator.kills * 15;
+  const lossRatio = gladiator.wins + gladiator.losses > 0 
+    ? gladiator.wins / (gladiator.wins + gladiator.losses) 
+    : 0;
+  const recordBonus = Math.floor(lossRatio * 100);
+  
+  // Morale bonus/penalty
+  const moraleModifier = (gladiator.morale - 1.0) * 50;
+  
+  // Injury penalty - injured gladiators worth less
+  const injuryPenalty = gladiator.injuries.reduce((total, injury) => {
+    const severityPenalty = injury.severity === 'permanent' ? 100 : 
+                           injury.severity === 'major' ? 50 : 25;
+    return total + severityPenalty;
+  }, 0);
+  
+  // Fatigue penalty
+  const fatiguePenalty = gladiator.fatigue > 50 ? (gladiator.fatigue - 50) : 0;
+  
+  const currentValue = baseValue 
+    + levelBonus 
+    + xpBonus
+    + statsBonus
+    + skillsBonus
+    + fameBonus 
+    + winBonus 
+    + killBonus
+    + recordBonus
+    + moraleModifier
+    - injuryPenalty
+    - fatiguePenalty;
+  
+  // Sell at 70-80% of value (buyers want profit margin)
+  const sellPercentage = 0.70 + (Math.random() * 0.10);
   
   return Math.max(10, Math.round((currentValue * sellPercentage) / 5) * 5);
 };

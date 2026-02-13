@@ -96,6 +96,9 @@ export interface Gladiator {
   // Injuries
   injuries: Injury[];
   
+  // Equipment
+  equippedItems?: string[]; // Array of equipped item IDs
+  
   // Economy
   fame: number;          // 0-1000 individual fame
   purchasePrice: number;
@@ -276,6 +279,12 @@ export type MarketItemCategory =
   | 'beasts'         // Animals for training/entertainment
   | 'services';      // Special services
 
+export type EquipmentSlot = 
+  | 'weapon'      // Swords, tridents, etc.
+  | 'shield'      // Shields
+  | 'armor'       // Body armor, helmets
+  | 'accessory';  // Sandals, weights, misc
+
 export interface MarketItemEffect {
   type: 
     | 'stat_boost'           // Permanent stat increase
@@ -293,6 +302,7 @@ export interface MarketItemEffect {
   stat?: keyof GladiatorStats;
   duration?: number; // For temporary effects (in days)
   quality?: 'common' | 'rare' | 'legendary';
+  slot?: EquipmentSlot; // Equipment slot type
 }
 
 export interface MarketItem {

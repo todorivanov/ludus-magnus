@@ -15,6 +15,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-02-13
+
+Quality of life improvements and bug fixes for the marketplace system.
+
+### Fixed
+- **Injury Time Display**: Gladiator roster and detail panel now show exact days remaining for injuries
+  - Roster cards show status as "Injured (Xd)" where X is the longest injury recovery time
+  - Detail panel displays comprehensive injury information with severity badges
+  - Each injury shows recovery days, stat penalties, and severity level
+- **Injury Healing Items**: Items that reduce injury recovery time now properly remove injuries when they reach 0 days
+  - Pain Relief Salve and similar items correctly filter out healed injuries
+  - Provides better feedback when injury is completely healed vs. partially healed
+- **XP Items Auto-Level-Up**: Experience-granting items (Combat Manual, Master's Techniques, etc.) now properly trigger automatic level-up when gladiators reach the XP threshold
+  - Gladiators correctly level up when using XP items
+  - Grants skill points and updates max HP/Stamina on level-up
+  - Shows how many levels were gained in the success message
+  - Multiple level-ups work correctly if the XP item grants enough experience
+- **Item Quantity Reduction**: Using items now properly reduces their quantity in inventory
+  - All item types (healing, XP, stat boosts, etc.) correctly consume one unit when used
+  - Items with 0 quantity are removed from inventory
+  - Previously only temporary effect items (buffs) were reducing quantity
+
+### Added
+- **Equipment Display**: Gladiator detail panel now shows equipped items
+  - New "Equipment" section displays all items equipped on a gladiator
+  - Shows item icon, name, description, and quality badge
+  - Equipment items are tracked separately and don't consume from inventory when equipped
+  - Equipped items persist with the gladiator
+- **Equipment Slot System**: Equipment items now have specific slots to prevent duplicate types
+  - **4 Equipment Slots**: Weapon, Shield, Armor, Accessory
+  - Only one item per slot can be equipped
+  - Equipping a new item in a slot automatically replaces the old one
+  - Examples:
+    - Can't equip two shields (Scutum) at once
+    - Can't equip two weapons (Gladius) at once
+    - Can equip: 1 weapon + 1 shield + 1 armor + 1 accessory = 4 items max
+  - Slot assignments:
+    - Weapon: Gladius (basic/masterwork)
+    - Shield: Reinforced Scutum
+    - Armor: Champion's Panoply
+    - Accessory: Training Weights, Mercury's Sandals
+
+### Improved
+- **Gladiator Sell Value**: Selling gladiators now properly reflects their training and experience:
+  - Significant level-based value increase (compound growth per level)
+  - Experience progress toward next level adds value
+  - Stats improvements from training increase value (+2g per stat point above base)
+  - Unused skill points add value (+30g each)
+  - Combat record (wins, kills, win ratio) increases value
+  - Morale affects value (high morale increases, low morale decreases)
+  - Injuries reduce value based on severity (permanent: -100g, major: -50g, minor: -25g)
+  - Fatigue reduces value when high
+  - Sell price now 70-80% of calculated value (up from 60-80%, less random variance)
+  - Well-trained gladiators can now sell for 2-5x their purchase price depending on development
+
+---
+
 ## [1.2.0] - 2026-02-13
 
 Major marketplace expansion with 35+ purchasable items, tournament system enhancements, and expanded building options for deeper ludus management.
@@ -405,6 +462,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.2.1 | 2026-02-13 | QoL improvements: injury display, healing fixes, sell value calculation |
 | 1.2.0 | 2026-02-13 | Marketplace expansion: 35+ items, tournament system, 13 new buildings |
 | 1.1.0 | 2026-02-05 | Major content expansion: 12 chapters, branching storylines, 35+ quests, bug fixes |
 | 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |
