@@ -38,11 +38,26 @@ Quality of life improvements and bug fixes for the marketplace system.
   - Previously only temporary effect items (buffs) were reducing quantity
 
 ### Added
+- **Unified Gladiator Management Screen**: Complete redesign consolidating all gladiator functionality into one powerful interface
+  - **New Layout**: Left sidebar roster list + right panel with comprehensive management tabs
+  - **5 Management Tabs**:
+    - **Overview**: Combat stats, injuries, equipment, combat record, morale/fatigue, quick actions (training/resting toggles, use items, sell)
+    - **Training**: Training regimen selection with real-time XP estimates, building bonuses, and injury risk display
+    - **Nutrition**: Nutrition plan selection affecting training effectiveness, healing speed, and morale
+    - **Skills**: Complete skill tree interface with offense/defense/utility branches for class-specific and universal skills
+    - **Items**: Dedicated item management - use consumables, view equipped gear, manage inventory
+  - **Integrated Functionality**: All gladiator features (previously split across Gladiators and Training screens) unified
+  - **Better UX**: No more screen switching - manage training, skills, items, and stats all from one location
+  - **Gladiator Header**: Quick view of name, level, fame, XP progress, core stats, health, stamina, morale, and fatigue
+  - **Smart Status Badges**: Roster cards show current activity (Ready, Training, Resting, Injured with days remaining)
+  - **Improved Navigation**: Training screen removed from main navigation - all features accessible via Gladiators screen tabs
+  
 - **Equipment Display**: Gladiator detail panel now shows equipped items
   - New "Equipment" section displays all items equipped on a gladiator
   - Shows item icon, name, description, and quality badge
   - Equipment items are tracked separately and don't consume from inventory when equipped
   - Equipped items persist with the gladiator
+  
 - **Equipment Slot System**: Equipment items now have specific slots to prevent duplicate types
   - **4 Equipment Slots**: Weapon, Shield, Armor, Accessory
   - Only one item per slot can be equipped
@@ -58,6 +73,17 @@ Quality of life improvements and bug fixes for the marketplace system.
     - Accessory: Training Weights, Mercury's Sandals
 
 ### Improved
+- **Optimized Layout & Spacing**: Refined the unified Gladiator Management Screen for better space utilization
+  - Tighter, more efficient spacing throughout (reduced gaps and padding)
+  - Compact roster cards with improved information density
+  - Smaller, cleaner gladiator header with better visual hierarchy
+  - Fixed sidebar width (320px) for consistency
+  - Responsive height calculations for better scrolling behavior
+  - Improved tab styling with better visual indicators
+  - Enhanced roster card design with cleaner borders and hover states
+  - Better use of vertical space - less scrolling required
+  - More professional, polished appearance overall
+  
 - **Gladiator Sell Value**: Selling gladiators now properly reflects their training and experience:
   - Significant level-based value increase (compound growth per level)
   - Experience progress toward next level adds value

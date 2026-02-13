@@ -7,7 +7,6 @@ import {
   MarketplaceScreen,
   GladiatorsScreen,
   LudusScreen,
-  TrainingScreen,
   StaffScreen,
   ArenaScreen,
   CombatScreen,
@@ -36,7 +35,8 @@ const App: React.FC = () => {
       case 'gladiators':
         return <GladiatorsScreen />;
       case 'training':
-        return <TrainingScreen />;
+        // Training functionality now integrated into GladiatorsScreen
+        return <GladiatorsScreen />;
       case 'staff':
         return <StaffScreen />;
       case 'marketplace':
