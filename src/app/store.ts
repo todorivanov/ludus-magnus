@@ -41,13 +41,51 @@ const rootReducer = combineReducers({
   marketplace: marketplaceReducer,
 });
 
+// Migration function for converting old day-based saves to month-based
+const migrations = {
+  // Migration from version 1 (day-based) to version 2 (month-based)
+  2: (state: any) => {
+    if (state.game && state.game.currentDay !== undefined && !state.game.currentYear) {
+      // Convert currentDay to year/month
+      const currentDay = state.game.currentDay || 1;
+      const totalMonths = currentDay; // Each "day" in the new system is actually a month
+      const currentYear = 73 + Math.floor((totalMonths - 1) / 12);
+      const currentMonth = ((totalMonths - 1) % 12) + 1;
+      
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          currentYear,
+          currentMonth,
+          totalMonthsPlayed: state.game.totalDaysPlayed || 0,
+          lastMonthReport: null,
+          showMonthReport: false,
+          monthProcessing: false,
+        },
+      };
+    }
+    return state;
+  },
+};
+
 // Persist configuration
 const persistConfig = {
   key: 'ludus-magnus-reborn',
-  version: 1,
+  version: 2, // Incremented version for migration
   storage,
   whitelist: ['game', 'player', 'gladiators', 'ludus', 'staff', 'economy', 'fame', 'factions', 'quests', 'tournaments', 'marketplace'],
   blacklist: ['combat'], // Don't persist combat state
+  migrate: (state: any, version: number) => {
+    // Run migrations sequentially
+    let migratedState = state;
+    for (let v = version + 1; v <= 2; v++) {
+      if (migrations[v as keyof typeof migrations]) {
+        migratedState = migrations[v as keyof typeof migrations](migratedState);
+      }
+    }
+    return Promise.resolve(migratedState);
+  },
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

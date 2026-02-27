@@ -27,7 +27,8 @@ export const MarketplaceScreen: React.FC = () => {
   const marketPool = gladiatorsState?.marketPool || [];
   const lastMarketRefresh = gladiatorsState?.lastMarketRefresh || 0;
   const { marketPrices } = useAppSelector(state => state.economy);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const { activeQuests } = useAppSelector(state => state.quests);
   const { itemStock, purchasedItems } = useAppSelector(state => state.marketplace);
   

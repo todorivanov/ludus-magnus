@@ -26,7 +26,8 @@ export const StaffScreen: React.FC = () => {
   const staffMarket = staffState?.staffMarket || [];
   const { gold } = useAppSelector(state => state.player);
   const { buildings } = useAppSelector(state => state.ludus);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
 
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [showHireModal, setShowHireModal] = useState(false);

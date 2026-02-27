@@ -20,7 +20,8 @@ export const LudusScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { buildings, securityRating, maxBuildings } = useAppSelector(state => state.ludus);
   const { gold, resources } = useAppSelector(state => state.player);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const { employees } = useAppSelector(state => state.staff);
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');

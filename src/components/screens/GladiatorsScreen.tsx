@@ -48,7 +48,8 @@ export const GladiatorsScreen: React.FC = () => {
   const roster = gladiatorsState?.roster || [];
   const deadGladiators = gladiatorsState?.deadGladiators || [];
   const selectedGladiatorId = gladiatorsState?.selectedGladiatorId || null;
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const { buildings } = useAppSelector(state => state.ludus);
   const { resources } = useAppSelector(state => state.player);
   const questsState = useAppSelector(state => state.quests);

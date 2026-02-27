@@ -3,22 +3,25 @@ import type { GameScreen, Difficulty, GameSettings } from '@/types';
 
 type TimePhase = 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night';
 
-interface DayReportEntry {
+interface MonthReportEntry {
   source: string;
   amount: number;
 }
 
-interface DayReport {
-  day: number;
-  income: DayReportEntry[];
-  expenses: DayReportEntry[];
+interface MonthReport {
+  year: number;
+  month: number;
+  income: MonthReportEntry[];
+  expenses: MonthReportEntry[];
   netGold: number;
   events: string[];
   alerts: { severity: 'info' | 'warning' | 'danger'; message: string }[];
 }
 
 interface ExtendedGameState {
-  currentDay: number;
+  // Time tracking
+  currentYear: number;
+  currentMonth: number; // 1-12 (January = 1, December = 12)
   currentPhase: TimePhase;
   currentScreen: GameScreen;
   isPaused: boolean;
@@ -26,19 +29,22 @@ interface ExtendedGameState {
   gameOverReason?: string;
   settings: GameSettings;
   
-  // Day processing
-  lastDayReport: DayReport | null;
-  showDayReport: boolean;
-  dayProcessing: boolean;
+  // Month processing
+  lastMonthReport: MonthReport | null;
+  showMonthReport: boolean;
+  monthProcessing: boolean;
   
   // Unrest
   unrestLevel: number;
   rebellionWarning: boolean;
   
   // Statistics
-  totalDaysPlayed: number;
+  totalMonthsPlayed: number;
   totalGoldEarned: number;
   totalGoldSpent: number;
+  
+  // Legacy support (for migration)
+  currentDay?: number; // Deprecated, kept for save compatibility
 }
 
 const initialSettings: GameSettings = {
@@ -50,19 +56,20 @@ const initialSettings: GameSettings = {
 };
 
 const initialState: ExtendedGameState = {
-  currentDay: 1,
+  currentYear: 73, // 73 AD - Year of the Colosseum construction
+  currentMonth: 1, // January
   currentPhase: 'morning',
   currentScreen: 'title',
   isPaused: false,
   isGameOver: false,
   gameOverReason: undefined,
   settings: initialSettings,
-  lastDayReport: null,
-  showDayReport: false,
-  dayProcessing: false,
+  lastMonthReport: null,
+  showMonthReport: false,
+  monthProcessing: false,
   unrestLevel: 0,
   rebellionWarning: false,
-  totalDaysPlayed: 0,
+  totalMonthsPlayed: 0,
   totalGoldEarned: 0,
   totalGoldSpent: 0,
 };
@@ -77,13 +84,19 @@ const gameSlice = createSlice({
     },
     
     // Time management
-    advanceDay: (state) => {
-      state.currentDay += 1;
-      state.totalDaysPlayed += 1;
+    advanceMonth: (state) => {
+      if (state.currentMonth === 12) {
+        state.currentMonth = 1;
+        state.currentYear += 1;
+      } else {
+        state.currentMonth += 1;
+      }
+      state.totalMonthsPlayed += 1;
       state.currentPhase = 'morning';
     },
-    setDay: (state, action: PayloadAction<number>) => {
-      state.currentDay = action.payload;
+    setMonth: (state, action: PayloadAction<{ year: number; month: number }>) => {
+      state.currentYear = action.payload.year;
+      state.currentMonth = action.payload.month;
     },
     setPhase: (state, action: PayloadAction<TimePhase>) => {
       state.currentPhase = action.payload;
@@ -96,23 +109,36 @@ const gameSlice = createSlice({
       }
     },
     
-    // Day processing
-    startDayProcessing: (state) => {
-      state.dayProcessing = true;
+    // Month processing
+    startMonthProcessing: (state) => {
+      state.monthProcessing = true;
     },
-    endDayProcessing: (state) => {
-      state.dayProcessing = false;
+    endMonthProcessing: (state) => {
+      state.monthProcessing = false;
     },
-    setDayReport: (state, action: PayloadAction<DayReport>) => {
-      state.lastDayReport = action.payload;
-      state.showDayReport = true;
+    setMonthReport: (state, action: PayloadAction<MonthReport>) => {
+      state.lastMonthReport = action.payload;
+      state.showMonthReport = true;
     },
-    hideDayReport: (state) => {
-      state.showDayReport = false;
+    hideMonthReport: (state) => {
+      state.showMonthReport = false;
     },
-    clearDayReport: (state) => {
-      state.lastDayReport = null;
-      state.showDayReport = false;
+    clearMonthReport: (state) => {
+      state.lastMonthReport = null;
+      state.showMonthReport = false;
+    },
+    
+    // Legacy support (kept for backward compatibility)
+    advanceDay: (state) => {
+      // Convert old day advances to month advances
+      if (state.currentMonth === 12) {
+        state.currentMonth = 1;
+        state.currentYear += 1;
+      } else {
+        state.currentMonth += 1;
+      }
+      state.totalMonthsPlayed += 1;
+      state.currentPhase = 'morning';
     },
     
     // Unrest
@@ -172,19 +198,20 @@ const gameSlice = createSlice({
     
     // New game / Reset
     startNewGame: (state, action: PayloadAction<{ difficulty: Difficulty }>) => {
-      state.currentDay = 1;
+      state.currentYear = 73; // 73 AD
+      state.currentMonth = 1; // January
       state.currentPhase = 'morning';
       state.currentScreen = 'dashboard';
       state.isPaused = false;
       state.isGameOver = false;
       state.gameOverReason = undefined;
       state.settings.difficulty = action.payload.difficulty;
-      state.lastDayReport = null;
-      state.showDayReport = false;
-      state.dayProcessing = false;
+      state.lastMonthReport = null;
+      state.showMonthReport = false;
+      state.monthProcessing = false;
       state.unrestLevel = 0;
       state.rebellionWarning = false;
-      state.totalDaysPlayed = 0;
+      state.totalMonthsPlayed = 0;
       state.totalGoldEarned = 0;
       state.totalGoldSpent = 0;
     },
@@ -194,15 +221,16 @@ const gameSlice = createSlice({
 
 export const {
   setScreen,
-  advanceDay,
-  setDay,
+  advanceDay, // Kept for backward compatibility
+  advanceMonth,
+  setMonth,
   setPhase,
   advancePhase,
-  startDayProcessing,
-  endDayProcessing,
-  setDayReport,
-  hideDayReport,
-  clearDayReport,
+  startMonthProcessing,
+  endMonthProcessing,
+  setMonthReport,
+  hideMonthReport,
+  clearMonthReport,
   setUnrestLevel,
   adjustUnrest,
   recordGoldEarned,
@@ -222,11 +250,57 @@ export const {
 } = gameSlice.actions;
 
 // Selectors
-export const selectCurrentDay = (state: { game: ExtendedGameState }) => state.game.currentDay;
+export const selectCurrentYear = (state: { game: ExtendedGameState }) => state.game.currentYear;
+export const selectCurrentMonth = (state: { game: ExtendedGameState }) => state.game.currentMonth;
 export const selectCurrentPhase = (state: { game: ExtendedGameState }) => state.game.currentPhase;
-export const selectLastDayReport = (state: { game: ExtendedGameState }) => state.game.lastDayReport;
-export const selectShowDayReport = (state: { game: ExtendedGameState }) => state.game.showDayReport;
+export const selectLastMonthReport = (state: { game: ExtendedGameState }) => state.game.lastMonthReport;
+export const selectShowMonthReport = (state: { game: ExtendedGameState }) => state.game.showMonthReport;
 export const selectUnrestLevel = (state: { game: ExtendedGameState }) => state.game.unrestLevel;
 export const selectRebellionWarning = (state: { game: ExtendedGameState }) => state.game.rebellionWarning;
+
+// Helper to get month name
+export const getMonthName = (month: number): string => {
+  const months = [
+    'Januarius', 'Februarius', 'Martius', 'Aprilis', 'Maius', 'Junius',
+    'Julius', 'Augustus', 'September', 'October', 'November', 'December'
+  ];
+  return months[month - 1] || 'Unknown';
+};
+
+// Helper to format date
+export const formatGameDate = (year: number, month: number): string => {
+  return `${getMonthName(month)}, ${year} AD`;
+};
+
+// Helper to get season from month
+export const getSeason = (month: number): { name: string; latin: string; icon: string } => {
+  // Spring: March, April, May (3, 4, 5)
+  if (month >= 3 && month <= 5) {
+    return { name: 'Spring', latin: 'Ver', icon: '🌸' };
+  }
+  // Summer: June, July, August (6, 7, 8)
+  if (month >= 6 && month <= 8) {
+    return { name: 'Summer', latin: 'Aestas', icon: '☀️' };
+  }
+  // Autumn: September, October, November (9, 10, 11)
+  if (month >= 9 && month <= 11) {
+    return { name: 'Autumn', latin: 'Autumnus', icon: '🍂' };
+  }
+  // Winter: December, January, February (12, 1, 2)
+  return { name: 'Winter', latin: 'Hiems', icon: '❄️' };
+};
+
+// Helper to convert year/month to day number (for backward compatibility)
+// Useful for systems that still need a numeric "day" value
+export const yearMonthToDay = (year: number, month: number): number => {
+  // Calculate total months since year 73
+  const totalMonths = (year - 73) * 12 + month;
+  return totalMonths; // Each "day" is actually a month
+};
+
+// Selector for currentDay (backward compatibility)
+export const selectCurrentDay = (state: { game: ExtendedGameState }) => {
+  return yearMonthToDay(state.game.currentYear, state.game.currentMonth);
+};
 
 export default gameSlice.reducer;

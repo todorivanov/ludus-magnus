@@ -34,7 +34,8 @@ export const FameScreen: React.FC = () => {
   
   const { roster } = useAppSelector(state => state.gladiators);
   const { gold } = useAppSelector(state => state.player);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'merchandise' | 'sponsorships' | 'gladiators'>('overview');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);

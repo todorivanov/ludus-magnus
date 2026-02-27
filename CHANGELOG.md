@@ -15,6 +15,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-02-13
+
+Major time system overhaul changing the game cycle from daily to monthly progression with full year/month tracking.
+
+### Changed
+- **Monthly Game Cycle**: Complete conversion from daily to monthly time progression
+  - Game now advances month by month instead of day by day
+  - Time displayed as Roman month names with year: "Januarius, 73 AD"
+  - Game starts in **Januarius (January), 73 AD** - the year of the Colosseum construction
+  - Years and months tracked separately for better immersion and historical accuracy
+  - Month transitions properly handle year rollover (December → January of next year)
+  
+- **UI Updates**:
+  - MainLayout header now shows current month and year in Roman style
+  - "Advance Day" button changed to "Advance Month"
+  - Month report modal replaces day report modal
+  - Mobile view shows abbreviated month names (e.g., "Jan 73")
+  - Roman month names used throughout:
+    - Januarius, Februarius, Martius, Aprilis, Maius, Junius
+    - Julius, Augustus, September, October, November, December
+    
+- **Economic Adjustments**:
+  - All costs and income scaled to monthly cycle
+  - Food costs: ~60g per gladiator per month (2g/day × 30)
+  - Staff wages remain the same but paid monthly
+  - Building construction and upgrades progress monthly
+  - Resource consumption balanced for monthly scale
+
+- **Technical**:
+  - Game state now stores `currentYear` and `currentMonth` instead of `currentDay`
+  - Backward compatibility maintained with `yearMonthToDay()` helper function
+  - All game systems updated to work with new time model
+  - Save games from previous versions will automatically migrate
+  - New selectors: `selectCurrentYear()`, `selectCurrentMonth()`
+  - Helper functions: `getMonthName()`, `formatGameDate()`, `yearMonthToDay()`
+
+### Fixed
+- Time-based calculations properly scale to monthly progression
+- Cooldowns and timers adjusted for new time scale
+- Quest progression and objectives work with monthly cycle
+- Tournament scheduling compatible with monthly system
+
+---
+
 ## [1.2.1] - 2026-02-13
 
 Quality of life improvements and bug fixes for the marketplace system.
@@ -488,7 +532,8 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.2.1 | 2026-02-13 | QoL improvements: injury display, healing fixes, sell value calculation |
+| 1.3.0 | 2026-02-13 | Monthly game cycle: Year/month tracking, Roman calendar, time system overhaul |
+| 1.2.1 | 2026-02-13 | Unified gladiator management, layout optimization, bug fixes |
 | 1.2.0 | 2026-02-13 | Marketplace expansion: 35+ items, tournament system, 13 new buildings |
 | 1.1.0 | 2026-02-05 | Major content expansion: 12 chapters, branching storylines, 35+ quests, bug fixes |
 | 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |

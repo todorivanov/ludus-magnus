@@ -2,11 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { 
-  advanceDay, 
+  advanceMonth, 
   setScreen,
-  setDayReport,
-  hideDayReport,
+  setMonthReport,
+  hideMonthReport,
   setUnrestLevel,
+  getMonthName,
+  getSeason,
 } from '@features/game/gameSlice';
 import { addGold, spendGold, consumeResource } from '@features/player/playerSlice';
 import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
@@ -31,18 +33,22 @@ import { MainLayout } from '@components/layout';
 import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
 import { clsx } from 'clsx';
 
-const TIME_PHASES = ['dawn', 'morning', 'afternoon', 'evening', 'night'] as const;
-
 export const DashboardScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const gameState = useAppSelector(state => state.game);
-  const currentDay = gameState?.currentDay || 1;
-  const currentPhase = gameState?.currentPhase || 'morning';
-  const showDayReport = gameState?.showDayReport || false;
-  const lastDayReport = gameState?.lastDayReport || null;
+  const currentYear = gameState?.currentYear || 73;
+  const currentMonth = gameState?.currentMonth || 1;
+  const showMonthReport = gameState?.showMonthReport || false;
+  const lastMonthReport = gameState?.lastMonthReport || null;
   const unrestLevel = gameState?.unrestLevel || 0;
   const rebellionWarning = gameState?.rebellionWarning || false;
   
+  // For systems that still need a day number (backward compatibility)
+  const currentDay = (currentYear - 73) * 12 + currentMonth;
+  
+  // Get current season
+  const currentSeason = getSeason(currentMonth);
+
   const playerState = useAppSelector(state => state.player);
   const gold = playerState?.gold || 0;
   const resources = playerState?.resources || { grain: 0, water: 0, wine: 0 };
@@ -71,14 +77,14 @@ export const DashboardScreen: React.FC = () => {
   const factionFavors = factionsState?.factionFavors || { optimates: 0, populares: 0, military: 0, merchants: 0 };
   const protectionLevel = factionsState?.protectionLevel || 0;
 
-  const [processingDay, setProcessingDay] = useState(false);
+  const [processingMonth, setProcessingMonth] = useState(false);
 
-  // Calculate daily expenses
-  const foodCosts = roster.length * 2;
+  // Calculate monthly expenses
+  const foodCosts = roster.length * 60; // ~2g per day * 30 days
 
-  // Process end of day
-  const handleEndDay = useCallback(() => {
-    setProcessingDay(true);
+  // Process end of month
+  const handleEndMonth = useCallback(() => {
+    setProcessingMonth(true);
     
     const income: { source: string; amount: number }[] = [];
     const expenses: { source: string; amount: number }[] = [];
@@ -468,32 +474,22 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Create day report
-    dispatch(setDayReport({
-      day: currentDay,
+    // Create month report for the month that just completed (BEFORE advancing)
+    dispatch(setMonthReport({
+      year: currentYear,
+      month: currentMonth,
       income,
       expenses,
       netGold: totalIncome - totalExpenses,
       events,
       alerts,
     }));
-
-    // Advance day
-    dispatch(advanceDay());
-    setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
-
-  // Get phase icon
-  const getPhaseIcon = (phase: string) => {
-    switch (phase) {
-      case 'dawn': return '🌅';
-      case 'morning': return '☀️';
-      case 'afternoon': return '🌤️';
-      case 'evening': return '🌆';
-      case 'night': return '🌙';
-      default: return '☀️';
-    }
-  };
+    
+    // THEN advance to next month
+    dispatch(advanceMonth());
+    
+    setProcessingMonth(false);
+  }, [dispatch, currentYear, currentMonth, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -523,26 +519,16 @@ export const DashboardScreen: React.FC = () => {
               Welcome, {name}
             </h1>
             <p className="text-roman-marble-400">
-              Day {currentDay} at {ludusName}
+              {getMonthName(currentMonth)}, {currentYear} AD at {ludusName}
             </p>
           </div>
           <div className="text-right">
-            <div className="flex items-center gap-2 text-2xl">
-              <span>{getPhaseIcon(currentPhase)}</span>
-              <span className="font-roman text-roman-gold-400 capitalize">{currentPhase}</span>
-            </div>
-            <div className="flex gap-1 mt-2">
-              {TIME_PHASES.map((phase, idx) => (
-                <div
-                  key={phase}
-                  className={clsx(
-                    'w-3 h-3 rounded-full',
-                    TIME_PHASES.indexOf(currentPhase) >= idx
-                      ? 'bg-roman-gold-500'
-                      : 'bg-roman-marble-700'
-                  )}
-                />
-              ))}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-3xl">{currentSeason.icon}</span>
+                <span className="font-roman text-xl text-roman-gold-400">{currentSeason.name}</span>
+              </div>
+              <span className="text-sm text-roman-marble-500 italic">{currentSeason.latin}</span>
             </div>
           </div>
         </motion.div>
@@ -707,10 +693,10 @@ export const DashboardScreen: React.FC = () => {
                   <Button
                     variant="gold"
                     className="w-full"
-                    onClick={handleEndDay}
-                    disabled={processingDay}
+                    onClick={handleEndMonth}
+                    disabled={processingMonth}
                   >
-                    {processingDay ? 'Processing...' : 'End Day →'}
+                    {processingMonth ? 'Processing...' : 'Advance Month →'}
                   </Button>
                 </div>
               </CardContent>
@@ -765,19 +751,19 @@ export const DashboardScreen: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Day Report Modal */}
+        {/* Month Report Modal */}
         <Modal
-          isOpen={showDayReport}
-          onClose={() => dispatch(hideDayReport())}
-          title={`Day ${lastDayReport?.day || currentDay - 1} Summary`}
+          isOpen={showMonthReport}
+          onClose={() => dispatch(hideMonthReport())}
+          title={`${getMonthName(lastMonthReport?.month || currentMonth)} ${lastMonthReport?.year || currentYear} AD Summary`}
           size="lg"
         >
-          {lastDayReport && (
+          {lastMonthReport && (
             <div className="space-y-6">
               {/* Alerts */}
-              {lastDayReport.alerts.length > 0 && (
+              {lastMonthReport.alerts.length > 0 && (
                 <div className="space-y-2">
-                  {lastDayReport.alerts.map((alert, idx) => (
+                  {lastMonthReport.alerts.map((alert, idx) => (
                     <div
                       key={idx}
                       className={clsx(
@@ -804,11 +790,11 @@ export const DashboardScreen: React.FC = () => {
                 {/* Income */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-health-high mb-3">Income</h4>
-                  {lastDayReport.income.length === 0 ? (
-                    <div className="text-roman-marble-500 text-sm">No income today</div>
+                  {lastMonthReport.income.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No income this month</div>
                   ) : (
                     <div className="space-y-2">
-                      {lastDayReport.income.map((item, idx) => (
+                      {lastMonthReport.income.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-roman-marble-400">{item.source}</span>
                           <span className="text-health-high">+{item.amount}g</span>
@@ -821,11 +807,11 @@ export const DashboardScreen: React.FC = () => {
                 {/* Expenses */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-roman-crimson-400 mb-3">Expenses</h4>
-                  {lastDayReport.expenses.length === 0 ? (
-                    <div className="text-roman-marble-500 text-sm">No expenses today</div>
+                  {lastMonthReport.expenses.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No expenses this month</div>
                   ) : (
                     <div className="space-y-2">
-                      {lastDayReport.expenses.map((item, idx) => (
+                      {lastMonthReport.expenses.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-roman-marble-400">{item.source}</span>
                           <span className="text-roman-crimson-400">-{item.amount}g</span>
@@ -839,25 +825,25 @@ export const DashboardScreen: React.FC = () => {
               {/* Net Gold */}
               <div className={clsx(
                 'p-4 rounded-lg text-center',
-                lastDayReport.netGold >= 0 
+                lastMonthReport.netGold >= 0 
                   ? 'bg-health-high/20 border border-health-high' 
                   : 'bg-roman-crimson-600/20 border border-roman-crimson-600'
               )}>
                 <div className="text-roman-marble-400 text-sm">Net Change</div>
                 <div className={clsx(
                   'font-roman text-2xl',
-                  lastDayReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
+                  lastMonthReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
                 )}>
-                  {lastDayReport.netGold >= 0 ? '+' : ''}{lastDayReport.netGold}g
+                  {lastMonthReport.netGold >= 0 ? '+' : ''}{lastMonthReport.netGold}g
                 </div>
               </div>
 
               {/* Events */}
-              {lastDayReport.events.length > 0 && (
+              {lastMonthReport.events.length > 0 && (
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-roman-gold-400 mb-3">Events</h4>
                   <div className="space-y-1 text-sm text-roman-marble-300">
-                    {lastDayReport.events.map((event, idx) => (
+                    {lastMonthReport.events.map((event, idx) => (
                       <div key={idx}>• {event}</div>
                     ))}
                   </div>
@@ -867,9 +853,9 @@ export const DashboardScreen: React.FC = () => {
               <Button
                 variant="gold"
                 className="w-full"
-                onClick={() => dispatch(hideDayReport())}
+                onClick={() => dispatch(hideMonthReport())}
               >
-                Continue to Day {currentDay}
+                Continue
               </Button>
             </div>
           )}
