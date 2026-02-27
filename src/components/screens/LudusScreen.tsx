@@ -14,7 +14,8 @@ import { BUILDINGS, getBuildingLevelData, getUpgradeCost } from '@data/buildings
 import { 
   getConditionCategory, 
   calculateRepairCost, 
-  getTotalMaintenanceCost 
+  getTotalMaintenanceCost,
+  calculateMaintenanceCost,
 } from '@/utils/buildingMaintenance';
 import type { Building, BuildingType } from '@/types';
 import { clsx } from 'clsx';
@@ -37,6 +38,29 @@ export const LudusScreen: React.FC = () => {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [buildingToMaintain, setBuildingToMaintain] = useState<Building | null>(null);
+
+  // Initialize missing maintenance fields for older save files
+  useEffect(() => {
+    buildings.forEach(building => {
+      if (!building.isUnderConstruction && !building.isUpgrading) {
+        // Initialize missing fields with defaults
+        const needsUpdate = 
+          building.condition === undefined || 
+          building.maintenanceCost === undefined;
+        
+        if (needsUpdate) {
+          const updates: Partial<Building> = {};
+          if (building.condition === undefined) {
+            updates.condition = 100;
+          }
+          if (building.maintenanceCost === undefined) {
+            updates.maintenanceCost = calculateMaintenanceCost(building.type, building.level);
+          }
+          dispatch(updateBuilding({ id: building.id, updates }));
+        }
+      }
+    });
+  }, []); // Run once on mount
 
   // Calculate security rating when component mounts or employees/buildings change
   useEffect(() => {
@@ -541,7 +565,7 @@ export const LudusScreen: React.FC = () => {
                   <div className="flex justify-between items-center mb-2">
                     <div className="text-sm text-roman-marble-300">Monthly Maintenance</div>
                     <div className="text-roman-gold-400 font-roman">
-                      {buildingToMaintain.maintenanceCost}g/month
+                      {buildingToMaintain.maintenanceCost ?? 0}g/month
                     </div>
                   </div>
                   <div className="text-xs text-roman-marble-500">
@@ -751,7 +775,7 @@ const BuildingCard: React.FC<BuildingCardProps> = ({ building, onUpgrade, canUpg
                   onMaintenance();
                 }}
               >
-                🔧 Maintenance ({building.maintenanceCost}g/month)
+                🔧 Maintenance ({building.maintenanceCost ?? 0}g/month)
               </Button>
             )}
           </div>

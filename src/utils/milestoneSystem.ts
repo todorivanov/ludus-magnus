@@ -37,8 +37,8 @@ export const TIME_MILESTONES: Milestone[] = [
     icon: '🔰',
     type: 'time',
     checkFunction: (gladiator) => {
-      return gladiator.monthsOfService >= 6 && 
-             !gladiator.milestones.some(m => m.id === 'service_6_months');
+      return (gladiator.monthsOfService ?? 0) >= 6 && 
+             !gladiator.milestones?.some(m => m.id === 'service_6_months');
     },
     rewards: {
       morale: 0.1, // +10% morale
@@ -53,8 +53,8 @@ export const TIME_MILESTONES: Milestone[] = [
     icon: '⚔️',
     type: 'time',
     checkFunction: (gladiator) => {
-      return gladiator.monthsOfService >= 12 && 
-             !gladiator.milestones.some(m => m.id === 'service_12_months');
+      return (gladiator.monthsOfService ?? 0) >= 12 && 
+             !gladiator.milestones?.some(m => m.id === 'service_12_months');
     },
     rewards: {
       fame: 25,
@@ -69,8 +69,8 @@ export const TIME_MILESTONES: Milestone[] = [
     icon: '🏆',
     type: 'time',
     checkFunction: (gladiator) => {
-      return gladiator.monthsOfService >= 24 && 
-             !gladiator.milestones.some(m => m.id === 'service_24_months');
+      return (gladiator.monthsOfService ?? 0) >= 24 && 
+             !gladiator.milestones?.some(m => m.id === 'service_24_months');
     },
     rewards: {
       fame: 50,
@@ -92,8 +92,8 @@ export const TIME_MILESTONES: Milestone[] = [
     icon: '👑',
     type: 'time',
     checkFunction: (gladiator) => {
-      return gladiator.monthsOfService >= 36 && 
-             !gladiator.milestones.some(m => m.id === 'service_36_months');
+      return (gladiator.monthsOfService ?? 0) >= 36 && 
+             !gladiator.milestones?.some(m => m.id === 'service_36_months');
     },
     rewards: {
       fame: 100,
@@ -110,8 +110,9 @@ export const TIME_MILESTONES: Milestone[] = [
     type: 'time',
     checkFunction: (gladiator, currentYear, currentMonth) => {
       // Check if it's their birthday this month
-      return currentMonth === gladiator.birthMonth && 
-             !gladiator.milestones.some(m => 
+      return gladiator.birthMonth !== undefined && 
+             currentMonth === gladiator.birthMonth && 
+             !gladiator.milestones?.some(m => 
                m.id === `birthday_${currentYear}` && 
                m.achievedYear === currentYear
              );
@@ -136,7 +137,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     type: 'achievement',
     checkFunction: (gladiator) => {
       return gladiator.wins >= 1 && 
-             !gladiator.milestones.some(m => m.id === 'first_victory');
+             !gladiator.milestones?.some(m => m.id === 'first_victory');
     },
     rewards: {
       fame: 10
@@ -151,7 +152,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     type: 'achievement',
     checkFunction: (gladiator) => {
       return gladiator.wins >= 10 && 
-             !gladiator.milestones.some(m => m.id === 'victor_10');
+             !gladiator.milestones?.some(m => m.id === 'victor_10');
     },
     rewards: {
       fame: 25,
@@ -167,7 +168,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     type: 'achievement',
     checkFunction: (gladiator) => {
       return gladiator.wins >= 25 && 
-             !gladiator.milestones.some(m => m.id === 'conqueror_25');
+             !gladiator.milestones?.some(m => m.id === 'conqueror_25');
     },
     rewards: {
       fame: 50,
@@ -184,7 +185,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     type: 'achievement',
     checkFunction: (gladiator) => {
       return gladiator.wins >= 50 && 
-             !gladiator.milestones.some(m => m.id === 'immortal_50');
+             !gladiator.milestones?.some(m => m.id === 'immortal_50');
     },
     rewards: {
       fame: 100,
@@ -208,7 +209,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     type: 'achievement',
     checkFunction: (gladiator) => {
       return gladiator.kills >= 1 && 
-             !gladiator.milestones.some(m => m.id === 'first_kill');
+             !gladiator.milestones?.some(m => m.id === 'first_kill');
     },
     rewards: {
       fame: 15,
@@ -226,7 +227,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
       // Check if they have 5+ wins and 0 losses, or achieved milestone already
       return gladiator.wins >= 5 && 
              gladiator.losses === 0 && 
-             !gladiator.milestones.some(m => m.id === 'undefeated_5');
+             !gladiator.milestones?.some(m => m.id === 'undefeated_5');
     },
     rewards: {
       fame: 30
@@ -242,7 +243,7 @@ export const ACHIEVEMENT_MILESTONES: Milestone[] = [
     checkFunction: (gladiator) => {
       return gladiator.wins >= 10 && 
              gladiator.losses === 0 && 
-             !gladiator.milestones.some(m => m.id === 'undefeated_10');
+             !gladiator.milestones?.some(m => m.id === 'undefeated_10');
     },
     rewards: {
       fame: 60,
@@ -263,8 +264,8 @@ export const SURVIVAL_MILESTONES: Milestone[] = [
     icon: '🛡️',
     type: 'survival',
     checkFunction: (gladiator) => {
-      return gladiator.age >= 35 && 
-             !gladiator.milestones.some(m => m.id === 'survived_35');
+      return (gladiator.age ?? 0) >= 35 && 
+             !gladiator.milestones?.some(m => m.id === 'survived_35');
     },
     rewards: {
       fame: 50,
@@ -279,8 +280,8 @@ export const SURVIVAL_MILESTONES: Milestone[] = [
     icon: '⭐',
     type: 'survival',
     checkFunction: (gladiator) => {
-      return gladiator.age >= 40 && 
-             !gladiator.milestones.some(m => m.id === 'survived_40');
+      return (gladiator.age ?? 0) >= 40 && 
+             !gladiator.milestones?.some(m => m.id === 'survived_40');
     },
     rewards: {
       fame: 100,
@@ -382,20 +383,21 @@ export function getMilestoneProgress(gladiator: Gladiator): string[] {
   const progress: string[] = [];
   
   // Check progress towards unachieved milestones
-  if (gladiator.wins < 10 && !gladiator.milestones.some(m => m.id === 'victor_10')) {
+  if (gladiator.wins < 10 && !gladiator.milestones?.some(m => m.id === 'victor_10')) {
     progress.push(`${gladiator.wins}/10 victories to Victor`);
-  } else if (gladiator.wins < 25 && !gladiator.milestones.some(m => m.id === 'conqueror_25')) {
+  } else if (gladiator.wins < 25 && !gladiator.milestones?.some(m => m.id === 'conqueror_25')) {
     progress.push(`${gladiator.wins}/25 victories to Conqueror`);
-  } else if (gladiator.wins < 50 && !gladiator.milestones.some(m => m.id === 'immortal_50')) {
+  } else if (gladiator.wins < 50 && !gladiator.milestones?.some(m => m.id === 'immortal_50')) {
     progress.push(`${gladiator.wins}/50 victories to Immortal`);
   }
   
-  if (gladiator.monthsOfService < 12 && !gladiator.milestones.some(m => m.id === 'service_12_months')) {
-    progress.push(`${gladiator.monthsOfService}/12 months to Veteran`);
-  } else if (gladiator.monthsOfService < 24 && !gladiator.milestones.some(m => m.id === 'service_24_months')) {
-    progress.push(`${gladiator.monthsOfService}/24 months to Champion`);
-  } else if (gladiator.monthsOfService < 36 && !gladiator.milestones.some(m => m.id === 'service_36_months')) {
-    progress.push(`${gladiator.monthsOfService}/36 months to Legend`);
+  const monthsOfService = gladiator.monthsOfService ?? 0;
+  if (monthsOfService < 12 && !gladiator.milestones?.some(m => m.id === 'service_12_months')) {
+    progress.push(`${monthsOfService}/12 months to Veteran`);
+  } else if (monthsOfService < 24 && !gladiator.milestones?.some(m => m.id === 'service_24_months')) {
+    progress.push(`${monthsOfService}/24 months to Champion`);
+  } else if (monthsOfService < 36 && !gladiator.milestones?.some(m => m.id === 'service_36_months')) {
+    progress.push(`${monthsOfService}/36 months to Legend`);
   }
   
   return progress;

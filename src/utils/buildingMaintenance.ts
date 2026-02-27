@@ -199,6 +199,6 @@ export function getTotalMaintenanceCost(buildings: Building[]): number {
     if (building.isUnderConstruction || building.isUpgrading) {
       return total;
     }
-    return total + building.maintenanceCost;
+    return total + (building.maintenanceCost ?? 0);
   }, 0);
 }

@@ -104,13 +104,18 @@ export const DashboardScreen: React.FC = () => {
     const expenses: { source: string; amount: number }[] = [];
     const events: string[] = [];
     const alerts: { severity: 'info' | 'warning' | 'danger'; message: string }[] = [];
+    
+    // Track available gold for sequential payments
+    let availableGold = gold;
 
     // Process expenses
     if (totalDailyWages > 0) {
       expenses.push({ source: 'Staff Wages', amount: totalDailyWages });
+      availableGold -= totalDailyWages;
     }
     if (foodCosts > 0) {
       expenses.push({ source: 'Food & Supplies', amount: foodCosts });
+      availableGold -= foodCosts;
     }
 
     // Calculate total expenses
@@ -291,7 +296,14 @@ export const DashboardScreen: React.FC = () => {
       }
       
       // Check for milestone achievements
-      const updatedGladiator = { ...gladiator, ...updates };
+      const updatedGladiator = { 
+        ...gladiator, 
+        ...updates,
+        // Ensure milestone-related fields exist for older gladiators
+        milestones: gladiator.milestones || [],
+        monthsOfService: gladiator.monthsOfService ?? 0,
+        titles: gladiator.titles || [],
+      };
       const newMilestones = checkMilestones(updatedGladiator, currentYear, currentMonth);
       
       if (newMilestones.length > 0) {
@@ -443,9 +455,24 @@ export const DashboardScreen: React.FC = () => {
       
       // Handle monthly degradation (if building has condition tracking)
       if (building.condition !== undefined && building.condition !== null) {
-        // For now, no maintenance is paid (will be added in UI later)
-        // Buildings will degrade automatically
-        const maintenancePaid = false; // TODO: Will be determined by player choice in UI
+        // Determine if maintenance can be paid
+        const maintenanceCost = building.maintenanceCost ?? 0;
+        const canAffordMaintenance = availableGold >= maintenanceCost;
+        let maintenancePaid = false;
+        
+        if (canAffordMaintenance && maintenanceCost > 0) {
+          // Deduct maintenance cost
+          dispatch(spendGold({
+            amount: maintenanceCost,
+            description: `Maintenance: ${building.type}`,
+            category: 'Maintenance',
+            day: currentDay,
+          }));
+          expenses.push({ source: `Maintenance: ${building.type}`, amount: maintenanceCost });
+          availableGold -= maintenanceCost; // Update local gold tracker
+          maintenancePaid = true;
+        }
+        
         const degradationUpdates = applyMonthlyDegradation(building, maintenancePaid);
         
         if (degradationUpdates.condition !== building.condition) {
@@ -460,6 +487,11 @@ export const DashboardScreen: React.FC = () => {
           } else if (newCondition < 25 && building.condition >= 25) {
             events.push(`🚨 ${building.type}: Building is ${conditionInfo.label}! Non-functional!`);
           }
+        }
+        
+        // Warn if maintenance could not be paid
+        if (!maintenancePaid && maintenanceCost > 0) {
+          events.push(`⚠️ Could not afford maintenance for ${building.type} (${maintenanceCost}g)`);
         }
       }
     });
@@ -525,7 +557,7 @@ export const DashboardScreen: React.FC = () => {
     // Process loan payments
     if (activeLoans.length > 0) {
       activeLoans.forEach(loan => {
-        const canAffordPayment = gold >= loan.monthlyPayment;
+        const canAffordPayment = availableGold >= loan.monthlyPayment;
         
         if (canAffordPayment) {
           // Make payment
@@ -541,6 +573,7 @@ export const DashboardScreen: React.FC = () => {
             currentYear 
           }));
           expenses.push({ source: `Loan Payment (${loan.type})`, amount: loan.monthlyPayment });
+          availableGold -= loan.monthlyPayment; // Update local tracker
           
           // Check if loan is completed
           if (loan.monthsPaid + 1 >= loan.durationMonths) {
@@ -618,13 +651,16 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
+    // Recalculate total expenses now that all expenses (wages, food, maintenance, loans) have been added
+    const finalTotalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    
     // Create month report for the month that just completed (BEFORE advancing)
     dispatch(setMonthReport({
       year: currentYear,
       month: currentMonth,
       income,
       expenses,
-      netGold: totalIncome - totalExpenses,
+      netGold: totalIncome - finalTotalExpenses,
       events,
       alerts,
     }));
