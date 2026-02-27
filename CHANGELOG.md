@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.0] - 2026-02-13
+## [1.4.0] - 2026-02-27
 
 Major expansion adding comprehensive time-based systems that leverage the monthly game cycle for strategic depth and immersion.
 
