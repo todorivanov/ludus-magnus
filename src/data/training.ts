@@ -294,13 +294,27 @@ export const calculateXPGain = (
   nutritionLevel: NutritionQuality,
   morale: number,
   fatigue: number,
-  buildingBonus: number = 0
+  buildingBonus: number = 0,
+  age?: number
 ): number => {
   const regimen = TRAINING_REGIMENS[trainingType];
   const baseXP = regimen.baseXPGain;
   
   // Level scaling (diminishing returns at higher levels)
   const levelMultiplier = Math.max(0.5, 1 - (gladiatorLevel * 0.03));
+  
+  // Age modifier (affects learning speed)
+  let ageModifier = 1.0;
+  if (age !== undefined) {
+    // Import dynamically to avoid circular dependency
+    // Youth (15-19): 1.25x, Prime (20-29): 1.0x, Veteran (30-35): 0.9x
+    // Aging (36-40): 0.75x, Old (41+): 0.6x
+    if (age < 20) ageModifier = 1.25;
+    else if (age < 30) ageModifier = 1.0;
+    else if (age < 36) ageModifier = 0.9;
+    else if (age < 41) ageModifier = 0.75;
+    else ageModifier = 0.6;
+  }
   
   const effectiveness = calculateTrainingEffectiveness(
     100,
@@ -310,7 +324,7 @@ export const calculateXPGain = (
     buildingBonus
   ) / 100;
   
-  return Math.round(baseXP * levelMultiplier * effectiveness);
+  return Math.round(baseXP * levelMultiplier * ageModifier * effectiveness);
 };
 
 // Calculate stat gains from training

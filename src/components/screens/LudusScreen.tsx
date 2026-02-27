@@ -5,11 +5,17 @@ import {
   startConstruction, 
   startUpgrade,
   calculateSecurityRating,
+  updateBuilding,
 } from '@features/ludus/ludusSlice';
 import { spendGold, consumeResource } from '@features/player/playerSlice';
 import { MainLayout } from '@components/layout';
-import { Card, CardHeader, CardTitle, CardContent, Button, Modal } from '@components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Modal, ProgressBar } from '@components/ui';
 import { BUILDINGS, getBuildingLevelData, getUpgradeCost } from '@data/buildings';
+import { 
+  getConditionCategory, 
+  calculateRepairCost, 
+  getTotalMaintenanceCost 
+} from '@/utils/buildingMaintenance';
 import type { Building, BuildingType } from '@/types';
 import { clsx } from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
@@ -29,6 +35,8 @@ export const LudusScreen: React.FC = () => {
   const [selectedBuildingType, setSelectedBuildingType] = useState<BuildingType | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [buildingToMaintain, setBuildingToMaintain] = useState<Building | null>(null);
 
   // Calculate security rating when component mounts or employees/buildings change
   useEffect(() => {
@@ -131,6 +139,8 @@ export const LudusScreen: React.FC = () => {
       constructionDaysRemaining: levelData.constructionDays,
       isUpgrading: false,
       upgradeDaysRemaining: 0,
+      condition: 100, // New buildings start at 100% condition
+      maintenanceCost: 0, // Will be set when construction completes
     };
 
     dispatch(startConstruction({ building: newBuilding }));
@@ -218,6 +228,69 @@ export const LudusScreen: React.FC = () => {
           </div>
         </div>
 
+        {/* Maintenance Summary */}
+        {buildings.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>🔧 Building Maintenance</CardTitle>
+                <div className="text-sm text-roman-marble-400">
+                  Total Monthly Cost: <span className="text-roman-gold-400 font-roman">
+                    {getTotalMaintenanceCost(buildings)}g
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3">
+                {buildings.filter(b => !b.isUnderConstruction && !b.isUpgrading).map(building => {
+                  const condition = building.condition ?? 100;
+                  const conditionInfo = getConditionCategory(condition);
+                  const needsAttention = condition < 75;
+                  
+                  return (
+                    <div
+                      key={building.id}
+                      className={clsx(
+                        'bg-roman-marble-800 p-3 rounded-lg border',
+                        needsAttention ? 'border-roman-crimson-700' : 'border-roman-marble-700'
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">{BUILDINGS[building.type].icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-roman-marble-200 truncate">
+                            {BUILDINGS[building.type].name}
+                          </div>
+                          <div className={clsx('text-xs', conditionInfo.color)}>
+                            {Math.round(condition)}% • {conditionInfo.label}
+                          </div>
+                        </div>
+                      </div>
+                      {needsAttention && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setBuildingToMaintain(building);
+                            setShowMaintenanceModal(true);
+                          }}
+                        >
+                          Repair
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 text-xs text-roman-marble-500">
+                Buildings degrade by 2% per month without maintenance. Degraded buildings lose effectiveness.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Current Buildings */}
         <Card>
           <CardHeader>
@@ -254,6 +327,10 @@ export const LudusScreen: React.FC = () => {
                       setShowUpgradeModal(true);
                     }}
                     canUpgrade={canAffordUpgrade(building)}
+                    onMaintenance={() => {
+                      setBuildingToMaintain(building);
+                      setShowMaintenanceModal(true);
+                    }}
                   />
                 ))}
               </div>
@@ -415,6 +492,163 @@ export const LudusScreen: React.FC = () => {
             />
           )}
         </Modal>
+
+        {/* Maintenance & Repair Modal */}
+        <Modal
+          isOpen={showMaintenanceModal}
+          onClose={() => {
+            setShowMaintenanceModal(false);
+            setBuildingToMaintain(null);
+          }}
+          title="🔧 Building Maintenance"
+        >
+          {buildingToMaintain && (
+            <div className="space-y-4">
+              <div className="bg-roman-marble-800 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-3xl">{BUILDINGS[buildingToMaintain.type].icon}</span>
+                  <div>
+                    <div className="font-roman text-lg text-roman-marble-100">
+                      {BUILDINGS[buildingToMaintain.type].name}
+                    </div>
+                    <div className="text-sm text-roman-marble-400">
+                      Level {buildingToMaintain.level}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Condition */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-roman-marble-400">Current Condition</span>
+                    <span className={getConditionCategory(buildingToMaintain.condition ?? 100).color}>
+                      {getConditionCategory(buildingToMaintain.condition ?? 100).label} ({Math.round(buildingToMaintain.condition ?? 100)}%)
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={buildingToMaintain.condition ?? 100}
+                    max={100}
+                    variant={(buildingToMaintain.condition ?? 100) >= 75 ? 'health' : 'stamina'}
+                    size="lg"
+                  />
+                  <div className="text-xs text-roman-marble-500 mt-2">
+                    {getConditionCategory(buildingToMaintain.condition ?? 100).description}
+                  </div>
+                </div>
+
+                {/* Monthly Maintenance */}
+                <div className="bg-roman-marble-900 p-3 rounded border border-roman-marble-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-roman-marble-300">Monthly Maintenance</div>
+                    <div className="text-roman-gold-400 font-roman">
+                      {buildingToMaintain.maintenanceCost}g/month
+                    </div>
+                  </div>
+                  <div className="text-xs text-roman-marble-500">
+                    Prevents degradation (-0.5% vs -2% without maintenance)
+                  </div>
+                </div>
+              </div>
+
+              {/* Repair Options */}
+              {(buildingToMaintain.condition ?? 100) < 100 && (
+                <div className="space-y-3">
+                  <div className="divider-roman" />
+                  <div className="text-sm text-roman-marble-300 font-roman mb-2">Repair Options</div>
+
+                  {/* Minor Repair */}
+                  {(buildingToMaintain.condition ?? 100) < 75 && (
+                    <div className="bg-roman-marble-800 p-3 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <div className="text-sm text-roman-marble-200">Minor Repair</div>
+                          <div className="text-xs text-roman-marble-500">Restore to 75% condition</div>
+                        </div>
+                        <div className="text-roman-gold-400 font-roman">
+                          {calculateRepairCost(buildingToMaintain, 75, 0)}g
+                        </div>
+                      </div>
+                      <Button
+                        variant={gold >= calculateRepairCost(buildingToMaintain, 75, 0) ? 'primary' : 'ghost'}
+                        size="sm"
+                        className="w-full"
+                        disabled={gold < calculateRepairCost(buildingToMaintain, 75, 0)}
+                        onClick={() => {
+                          const cost = calculateRepairCost(buildingToMaintain, 75, 0);
+                          if (gold >= cost) {
+                            dispatch(spendGold({
+                              amount: cost,
+                              description: `Minor Repair: ${buildingToMaintain.type}`,
+                              category: 'Maintenance',
+                              day: currentDay,
+                            }));
+                            dispatch(updateBuilding({
+                              id: buildingToMaintain.id,
+                              updates: { condition: 75 }
+                            }));
+                            setShowMaintenanceModal(false);
+                            setBuildingToMaintain(null);
+                          }
+                        }}
+                      >
+                        Perform Minor Repair
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Major Repair */}
+                  <div className="bg-roman-marble-800 p-3 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <div>
+                        <div className="text-sm text-roman-marble-200">Major Repair</div>
+                        <div className="text-xs text-roman-marble-500">Restore to 100% condition</div>
+                      </div>
+                      <div className="text-roman-gold-400 font-roman">
+                        {calculateRepairCost(buildingToMaintain, 100, 0)}g
+                      </div>
+                    </div>
+                    <Button
+                      variant={gold >= calculateRepairCost(buildingToMaintain, 100, 0) ? 'gold' : 'ghost'}
+                      size="sm"
+                      className="w-full"
+                      disabled={gold < calculateRepairCost(buildingToMaintain, 100, 0)}
+                      onClick={() => {
+                        const cost = calculateRepairCost(buildingToMaintain, 100, 0);
+                        if (gold >= cost) {
+                          dispatch(spendGold({
+                            amount: cost,
+                            description: `Major Repair: ${buildingToMaintain.type}`,
+                            category: 'Maintenance',
+                            day: currentDay,
+                          }));
+                          dispatch(updateBuilding({
+                            id: buildingToMaintain.id,
+                            updates: { condition: 100 }
+                          }));
+                          setShowMaintenanceModal(false);
+                          setBuildingToMaintain(null);
+                        }
+                      }}
+                    >
+                      Perform Major Repair
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setShowMaintenanceModal(false);
+                  setBuildingToMaintain(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </Modal>
       </motion.div>
     </MainLayout>
   );
@@ -425,15 +659,19 @@ interface BuildingCardProps {
   building: Building;
   onUpgrade: () => void;
   canUpgrade: boolean;
+  onMaintenance?: () => void;
 }
 
-const BuildingCard: React.FC<BuildingCardProps> = ({ building, onUpgrade, canUpgrade }) => {
+const BuildingCard: React.FC<BuildingCardProps> = ({ building, onUpgrade, canUpgrade, onMaintenance }) => {
   const buildingData = BUILDINGS[building.type];
   const levelData = getBuildingLevelData(building.type, building.level);
 
   const getLevelStars = () => {
     return '★'.repeat(building.level) + '☆'.repeat(3 - building.level);
   };
+  
+  const condition = building.condition ?? 100;
+  const conditionInfo = getConditionCategory(condition);
 
   return (
     <Card 
@@ -482,6 +720,42 @@ const BuildingCard: React.FC<BuildingCardProps> = ({ building, onUpgrade, canUpg
             </div>
           )}
         </div>
+
+        {/* Building Condition */}
+        {!building.isUnderConstruction && condition !== undefined && (
+          <div className="mb-3">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-roman-marble-400">Condition</span>
+              <span className={conditionInfo.color}>
+                {conditionInfo.label} ({Math.round(condition)}%)
+              </span>
+            </div>
+            <ProgressBar
+              value={condition}
+              max={100}
+              variant={condition >= 75 ? 'health' : condition >= 50 ? 'stamina' : 'stamina'}
+              size="sm"
+            />
+            {condition < 75 && (
+              <div className="text-xs text-roman-marble-500 mt-1">
+                {conditionInfo.description}
+              </div>
+            )}
+            {onMaintenance && condition < 100 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMaintenance();
+                }}
+              >
+                🔧 Maintenance ({building.maintenanceCost}g/month)
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Upgrade Button */}
         {building.level < 3 && !building.isUnderConstruction && !building.isUpgrading && (

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Building, BuildingType } from '@/types';
+import { calculateMaintenanceCost } from '@/utils/buildingMaintenance';
 
 interface LudusState {
   buildings: Building[];
@@ -47,6 +48,8 @@ const ludusSlice = createSlice({
       if (building) {
         building.isUnderConstruction = false;
         building.constructionDaysRemaining = 0;
+        // Set maintenance cost now that construction is complete
+        building.maintenanceCost = calculateMaintenanceCost(building.type, building.level);
       }
       state.constructionQueue = state.constructionQueue.filter(id => id !== action.payload);
     },

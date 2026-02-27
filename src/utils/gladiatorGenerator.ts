@@ -7,6 +7,7 @@ import {
   ROMAN_COGNOMENS,
   FOREIGN_NAMES,
 } from '@data/gladiatorClasses';
+import { generateAge, getAgePriceModifier } from './ageSystem';
 
 // Random number between min and max (inclusive)
 const randomInt = (min: number, max: number): number => {
@@ -95,6 +96,8 @@ export const generateGladiator = (
     gladiatorClass?: GladiatorClass;
     origin?: GladiatorOrigin;
     level?: number;
+    currentYear?: number;
+    currentMonth?: number;
   } = {}
 ): Gladiator => {
   // Random class if not specified
@@ -111,10 +114,21 @@ export const generateGladiator = (
   // Generate stats
   const stats = generateStats(classData, origin);
   
+  // Generate age and birth date
+  const currentYear = options.currentYear || 73; // Default to 73 AD
+  const currentMonth = options.currentMonth || 1; // Default to January
+  const age = generateAge(origin);
+  const birthYear = currentYear - age;
+  const birthMonth = randomInt(1, 12);
+  
   // Calculate derived values
   const maxHP = calculateMaxHP(stats.constitution);
   const maxStamina = calculateMaxStamina(stats.endurance);
-  const price = calculatePrice(stats, gladiatorClass, origin);
+  
+  // Calculate price with age modifier
+  const basePrice = calculatePrice(stats, gladiatorClass, origin);
+  const agePriceModifier = getAgePriceModifier(age);
+  const price = Math.round(basePrice * agePriceModifier);
   
   // Level (elite fighters start higher)
   const level = options.level || (origin === 'elite' ? randomInt(3, 6) : 1);
@@ -150,6 +164,16 @@ export const generateGladiator = (
     skillPoints: 0,
     skills: [],
     
+    // Age & Career
+    age,
+    birthYear,
+    birthMonth,
+    careerStartYear: currentYear,
+    careerStartMonth: currentMonth,
+    monthsOfService: 0,
+    milestones: [],
+    titles: [],
+    
     injuries: [],
     
     fame: origin === 'elite' ? randomInt(20, 50) : 0,
@@ -166,7 +190,11 @@ export const generateGladiator = (
 };
 
 // Generate multiple gladiators for the marketplace
-export const generateMarketPool = (count: number = 6): Gladiator[] => {
+export const generateMarketPool = (
+  count: number = 6, 
+  currentYear: number = 73, 
+  currentMonth: number = 1
+): Gladiator[] => {
   const pool: Gladiator[] = [];
   
   for (let i = 0; i < count; i++) {
@@ -178,7 +206,7 @@ export const generateMarketPool = (count: number = 6): Gladiator[] => {
     else if (roll < 0.85) origin = 'volunteer';
     else origin = 'elite';
     
-    pool.push(generateGladiator({ origin }));
+    pool.push(generateGladiator({ origin, currentYear, currentMonth }));
   }
   
   // Sort by price
@@ -217,6 +245,10 @@ export const calculateSellValue = (gladiator: Gladiator): number => {
   // Morale bonus/penalty
   const moraleModifier = (gladiator.morale - 1.0) * 50;
   
+  // Age penalty - older gladiators worth less (shorter career ahead)
+  const agePriceModifier = gladiator.age ? getAgePriceModifier(gladiator.age) : 1.0;
+  const ageAdjustment = baseValue * (agePriceModifier - 1.0); // Negative for older gladiators
+  
   // Injury penalty - injured gladiators worth less
   const injuryPenalty = gladiator.injuries.reduce((total, injury) => {
     const severityPenalty = injury.severity === 'permanent' ? 100 : 
@@ -237,6 +269,7 @@ export const calculateSellValue = (gladiator: Gladiator): number => {
     + killBonus
     + recordBonus
     + moraleModifier
+    + ageAdjustment
     - injuryPenalty
     - fatiguePenalty;
   

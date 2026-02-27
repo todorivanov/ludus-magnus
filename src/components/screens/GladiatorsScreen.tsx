@@ -35,6 +35,7 @@ import {
 } from '@data/skillTrees';
 import { getQuestById } from '@data/quests';
 import { calculateSellValue } from '@utils/gladiatorGenerator';
+import { getAgeCategoryDescription } from '@/utils/ageSystem';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
 
@@ -459,6 +460,9 @@ const RosterCard: React.FC<RosterCardProps> = ({ gladiator, isSelected, onClick 
   };
 
   const status = getStatusBadge();
+  
+  // Get age info
+  const ageInfo = gladiator.age ? getAgeCategoryDescription(gladiator.age) : null;
 
   return (
     <motion.div
@@ -489,6 +493,11 @@ const RosterCard: React.FC<RosterCardProps> = ({ gladiator, isSelected, onClick 
             <span className="text-xs text-roman-marble-500">
               {classData.name}
             </span>
+            {ageInfo && (
+              <span className={clsx('text-xs shrink-0', ageInfo.color)} title={ageInfo.description}>
+                {gladiator.age}y
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
@@ -524,6 +533,7 @@ const GladiatorHeader: React.FC<GladiatorHeaderProps> = ({ gladiator }) => {
   const xpForNextLevel = gladiator.level * 100;
   const xpProgress = (gladiator.experience / xpForNextLevel) * 100;
   const moraleDisplay = Math.round((gladiator.morale - 0.1) / 1.4 * 100);
+  const ageInfo = gladiator.age ? getAgeCategoryDescription(gladiator.age) : null;
 
   return (
     <div className="flex items-start gap-4">
@@ -539,9 +549,17 @@ const GladiatorHeader: React.FC<GladiatorHeaderProps> = ({ gladiator }) => {
           <span className="text-sm text-roman-gold-400">
             ⭐ {gladiator.fame}
           </span>
+          {ageInfo && (
+            <span className={clsx('text-sm px-2 py-0.5 rounded', ageInfo.color, 'bg-roman-marble-800')} title={ageInfo.description}>
+              {gladiator.age} years • {ageInfo.label}
+            </span>
+          )}
         </div>
         <div className="text-sm text-roman-marble-400 mb-2">
           {classData?.name} • {gladiator.origin}
+          {gladiator.titles && gladiator.titles.length > 0 && (
+            <span className="text-roman-gold-400"> • {gladiator.titles[gladiator.titles.length - 1]}</span>
+          )}
         </div>
         <div className="mb-3">
           <div className="flex justify-between text-xs mb-0.5">

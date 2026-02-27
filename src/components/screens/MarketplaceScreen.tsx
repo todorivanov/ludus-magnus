@@ -8,6 +8,7 @@ import { purchaseItem, initializeStock } from '@features/marketplace/marketplace
 import { MainLayout } from '@components/layout';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@components/ui';
 import { generateMarketPool } from '@utils/gladiatorGenerator';
+import { getAgeCategoryDescription } from '@/utils/ageSystem';
 import { GLADIATOR_CLASSES, GLADIATOR_ORIGINS } from '@data/gladiatorClasses';
 import { getQuestById } from '@data/quests';
 import { ALL_MARKET_ITEMS, CATEGORY_INFO, getAvailableItems, type MarketItem } from '@data/marketplace';
@@ -67,9 +68,12 @@ export const MarketplaceScreen: React.FC = () => {
   // Generate market pool on first load or auto-refresh every 10 days
   useEffect(() => {
     if (marketPool.length === 0 || shouldAutoRefresh) {
-      dispatch(refreshMarket({ pool: generateMarketPool(6), day: currentDay }));
+      dispatch(refreshMarket({ 
+        pool: generateMarketPool(6, gameState?.currentYear ?? 73, gameState?.currentMonth ?? 1), 
+        day: currentDay 
+      }));
     }
-  }, [dispatch, marketPool.length, shouldAutoRefresh, currentDay]);
+  }, [dispatch, marketPool.length, shouldAutoRefresh, currentDay, gameState?.currentYear, gameState?.currentMonth]);
 
   // Handle manual refresh
   const handleManualRefresh = () => {
@@ -80,7 +84,10 @@ export const MarketplaceScreen: React.FC = () => {
         category: 'service',
         day: currentDay,
       }));
-      dispatch(refreshMarket({ pool: generateMarketPool(6), day: currentDay }));
+      dispatch(refreshMarket({ 
+        pool: generateMarketPool(6, gameState?.currentYear ?? 73, gameState?.currentMonth ?? 1), 
+        day: currentDay 
+      }));
       setSelectedGladiator(null);
     }
   };
@@ -518,6 +525,7 @@ const GladiatorCard: React.FC<GladiatorCardProps> = ({
 }) => {
   const classData = GLADIATOR_CLASSES[gladiator.class];
   const originData = GLADIATOR_ORIGINS[gladiator.origin];
+  const ageInfo = gladiator.age ? getAgeCategoryDescription(gladiator.age) : null;
 
   return (
     <motion.div
@@ -541,6 +549,11 @@ const GladiatorCard: React.FC<GladiatorCardProps> = ({
             <span className="text-xs px-2 py-0.5 bg-roman-marble-700 rounded text-roman-marble-300">
               Lv.{gladiator.level}
             </span>
+            {ageInfo && (
+              <span className={clsx('text-xs px-2 py-0.5 rounded', ageInfo.color, 'bg-roman-marble-700')} title={ageInfo.description}>
+                {gladiator.age}y • {ageInfo.label}
+              </span>
+            )}
           </div>
           <div className="text-sm text-roman-marble-400">
             {classData.name} • {originData.name}
