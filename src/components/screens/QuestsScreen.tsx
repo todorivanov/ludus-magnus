@@ -39,7 +39,8 @@ export const QuestsScreen: React.FC = () => {
   const isEndlessMode = questsState?.isEndlessMode || false;
 
   const { gold } = useAppSelector(state => state.player);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameSliceState = useAppSelector(state => state.game);
+  const currentDay = ((gameSliceState?.currentYear ?? 73) - 73) * 12 + (gameSliceState?.currentMonth ?? 1);
   const fameState = useAppSelector(state => state.fame);
   const ludusFame = fameState?.ludusFame || 0;
   const gladiatorsState = useAppSelector(state => state.gladiators);

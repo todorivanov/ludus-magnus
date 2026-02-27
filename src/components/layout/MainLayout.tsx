@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
-import { setScreen } from '@features/game/gameSlice';
+import { setScreen, getMonthName } from '@features/game/gameSlice';
 import type { GameScreen } from '@/types';
 import { clsx } from 'clsx';
 import { Tooltip } from '@components/ui';
@@ -13,9 +13,12 @@ interface MainLayoutProps {
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const gameState = useAppSelector(state => state.game);
-  const currentDay = gameState?.currentDay || 1;
+  const currentYear = gameState?.currentYear || 73;
+  const currentMonth = gameState?.currentMonth || 1;
   const currentScreen = gameState?.currentScreen || 'dashboard';
   const currentPhase = gameState?.currentPhase || 'morning';
+  
+  const monthName = getMonthName(currentMonth);
   
   const playerState = useAppSelector(state => state.player);
   const fameState = useAppSelector(state => state.fame);
@@ -75,16 +78,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </h1>
             <div className="hidden sm:flex items-center gap-2 text-roman-marble-400 text-sm">
               <span>{getPhaseIcon()}</span>
-              <span>Day {currentDay}</span>
+              <span>{monthName}, {currentYear} AD</span>
             </div>
           </div>
 
           {/* Resources */}
           <div className="flex items-center gap-3 sm:gap-6">
-            {/* Day (mobile only) */}
+            {/* Date (mobile only) */}
             <div className="flex sm:hidden items-center gap-1 text-roman-marble-400 text-xs">
               <span>{getPhaseIcon()}</span>
-              <span>D{currentDay}</span>
+              <span>{monthName.substring(0, 3)} {currentYear}</span>
             </div>
 
             {/* Gold */}

@@ -2,11 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { 
-  advanceDay, 
+  advanceMonth, 
   setScreen,
-  setDayReport,
-  hideDayReport,
+  setMonthReport,
+  hideMonthReport,
   setUnrestLevel,
+  getMonthName,
+  getSeason,
 } from '@features/game/gameSlice';
 import { addGold, spendGold, consumeResource } from '@features/player/playerSlice';
 import { NUTRITION_OPTIONS, type NutritionQuality } from '@data/training';
@@ -23,26 +25,38 @@ import {
   updateUpgradeProgress,
   completeUpgrade,
   calculateSecurityRating,
+  updateBuilding,
 } from '@features/ludus/ludusSlice';
-import { updateGladiator } from '@features/gladiators/gladiatorsSlice';
+import { applyMonthlyDegradation, getConditionCategory } from '@/utils/buildingMaintenance';
+import { checkMilestones, awardMilestone } from '@/utils/milestoneSystem';
+import { getEventsForMonth } from '@/data/historicalEvents';
+import { LOAN_TYPES, calculateMonthlyPayment, calculateTotalRepayment } from '@/data/loans';
+import { takeLoan } from '@features/loans/loansSlice';
+import { updateGladiator, removeGladiator } from '@features/gladiators/gladiatorsSlice';
 import { addExperience as addStaffExperience } from '@features/staff/staffSlice';
+import { makePayment, missPayment } from '@features/loans/loansSlice';
+import { adjustFavor } from '@features/factions/factionsSlice';
 import { Card, CardHeader, CardTitle, CardContent, Button, ProgressBar, Modal } from '@components/ui';
 import { MainLayout } from '@components/layout';
 import { processGladiatorDay, calculateUnrest, rollRandomEvent, type RandomEvent } from '../../game/GameLoop';
 import { clsx } from 'clsx';
 
-const TIME_PHASES = ['dawn', 'morning', 'afternoon', 'evening', 'night'] as const;
-
 export const DashboardScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const gameState = useAppSelector(state => state.game);
-  const currentDay = gameState?.currentDay || 1;
-  const currentPhase = gameState?.currentPhase || 'morning';
-  const showDayReport = gameState?.showDayReport || false;
-  const lastDayReport = gameState?.lastDayReport || null;
+  const currentYear = gameState?.currentYear || 73;
+  const currentMonth = gameState?.currentMonth || 1;
+  const showMonthReport = gameState?.showMonthReport || false;
+  const lastMonthReport = gameState?.lastMonthReport || null;
   const unrestLevel = gameState?.unrestLevel || 0;
   const rebellionWarning = gameState?.rebellionWarning || false;
   
+  // For systems that still need a day number (backward compatibility)
+  const currentDay = (currentYear - 73) * 12 + currentMonth;
+  
+  // Get current season
+  const currentSeason = getSeason(currentMonth);
+
   const playerState = useAppSelector(state => state.player);
   const gold = playerState?.gold || 0;
   const resources = playerState?.resources || { grain: 0, water: 0, wine: 0 };
@@ -71,26 +85,37 @@ export const DashboardScreen: React.FC = () => {
   const factionFavors = factionsState?.factionFavors || { optimates: 0, populares: 0, military: 0, merchants: 0 };
   const protectionLevel = factionsState?.protectionLevel || 0;
 
-  const [processingDay, setProcessingDay] = useState(false);
+  const loansState = useAppSelector(state => state.loans);
+  const activeLoans = loansState?.activeLoans.filter(loan => loan.isActive) || [];
 
-  // Calculate daily expenses
-  const foodCosts = roster.length * 2;
+  const [processingMonth, setProcessingMonth] = useState(false);
+  const [showLoansModal, setShowLoansModal] = useState(false);
+  const [selectedLoanType, setSelectedLoanType] = useState<'short' | 'medium' | 'long' | null>(null);
+  const [loanAmount, setLoanAmount] = useState(0);
 
-  // Process end of day
-  const handleEndDay = useCallback(() => {
-    setProcessingDay(true);
+  // Calculate monthly expenses
+  const foodCosts = roster.length * 60; // ~2g per day * 30 days
+
+  // Process end of month
+  const handleEndMonth = useCallback(() => {
+    setProcessingMonth(true);
     
     const income: { source: string; amount: number }[] = [];
     const expenses: { source: string; amount: number }[] = [];
     const events: string[] = [];
     const alerts: { severity: 'info' | 'warning' | 'danger'; message: string }[] = [];
+    
+    // Track available gold for sequential payments
+    let availableGold = gold;
 
     // Process expenses
     if (totalDailyWages > 0) {
       expenses.push({ source: 'Staff Wages', amount: totalDailyWages });
+      availableGold -= totalDailyWages;
     }
     if (foodCosts > 0) {
       expenses.push({ source: 'Food & Supplies', amount: foodCosts });
+      availableGold -= foodCosts;
     }
 
     // Calculate total expenses
@@ -226,14 +251,25 @@ export const DashboardScreen: React.FC = () => {
       staffBonuses.nutritionValue = (staffBonuses.nutritionValue || 0) + 15 * coquusCount;
     }
 
-    // Process gladiator recovery
+    // Process gladiator recovery and aging
+    const gladiatorsToRemove: string[] = []; // Track gladiators who died
+    
     roster.forEach(gladiator => {
-      const { updates, events: gladEvents } = processGladiatorDay(
+      const { updates, events: gladEvents, died } = processGladiatorDay(
         gladiator,
         gladiator.isTraining || false,
         gladiator.isResting || false,
-        staffBonuses
+        staffBonuses,
+        currentYear,
+        currentMonth
       );
+      
+      // If gladiator died from old age, mark for removal
+      if (died) {
+        gladiatorsToRemove.push(gladiator.id);
+        events.push(`${gladiator.name}: ${gladEvents.join(', ')}`);
+        return; // Skip further processing
+      }
       
       // Check for any pending level-ups (for existing saves with excess XP)
       let currentXP = updates.experience !== undefined ? updates.experience : gladiator.experience;
@@ -259,6 +295,40 @@ export const DashboardScreen: React.FC = () => {
         updates.maxStamina = 50 + currentLevel * 5 + Math.round(gladiator.stats.endurance * 1.5);
       }
       
+      // Check for milestone achievements
+      const updatedGladiator = { 
+        ...gladiator, 
+        ...updates,
+        // Ensure milestone-related fields exist for older gladiators
+        milestones: gladiator.milestones || [],
+        monthsOfService: gladiator.monthsOfService ?? 0,
+        titles: gladiator.titles || [],
+      };
+      const newMilestones = checkMilestones(updatedGladiator, currentYear, currentMonth);
+      
+      if (newMilestones.length > 0) {
+        newMilestones.forEach(milestone => {
+          const milestoneResult = awardMilestone(updatedGladiator, milestone, currentYear, currentMonth);
+          
+          // Apply milestone updates
+          Object.assign(updates, milestoneResult.updates);
+          
+          // Add gold reward if any
+          if (milestoneResult.goldReward) {
+            dispatch(addGold({
+              amount: milestoneResult.goldReward,
+              description: `Milestone: ${milestone.name}`,
+              category: 'Milestones',
+              day: (currentYear - 73) * 12 + currentMonth
+            }));
+            income.push({ source: `Milestone: ${milestone.name}`, amount: milestoneResult.goldReward });
+          }
+          
+          // Add notification
+          events.push(milestoneResult.notification);
+        });
+      }
+      
       // Apply the updates to the gladiator
       if (Object.keys(updates).length > 0) {
         dispatch(updateGladiator({ id: gladiator.id, updates }));
@@ -268,6 +338,13 @@ export const DashboardScreen: React.FC = () => {
         events.push(`${gladiator.name}: ${gladEvents.join(', ')}`);
       }
     });
+    
+    // Remove gladiators who died from old age
+    if (gladiatorsToRemove.length > 0) {
+      gladiatorsToRemove.forEach(id => {
+        dispatch(removeGladiator(id));
+      });
+    }
 
     // Update reach_level quest objectives with highest gladiator level
     const highestLevel = roster.length > 0 
@@ -334,7 +411,7 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Process building construction and upgrades
+    // Process building construction, upgrades, and degradation
     buildings.forEach(building => {
       // Handle construction
       if (building.isUnderConstruction && building.constructionDaysRemaining !== undefined) {
@@ -373,6 +450,48 @@ export const DashboardScreen: React.FC = () => {
           events.push(`Upgrade complete: ${building.type} to level ${building.level + 1}`);
         } else {
           dispatch(updateUpgradeProgress({ id: building.id, daysRemaining: newDays }));
+        }
+      }
+      
+      // Handle monthly degradation (if building has condition tracking)
+      if (building.condition !== undefined && building.condition !== null) {
+        // Determine if maintenance can be paid
+        const maintenanceCost = building.maintenanceCost ?? 0;
+        const canAffordMaintenance = availableGold >= maintenanceCost;
+        let maintenancePaid = false;
+        
+        if (canAffordMaintenance && maintenanceCost > 0) {
+          // Deduct maintenance cost
+          dispatch(spendGold({
+            amount: maintenanceCost,
+            description: `Maintenance: ${building.type}`,
+            category: 'Maintenance',
+            day: currentDay,
+          }));
+          expenses.push({ source: `Maintenance: ${building.type}`, amount: maintenanceCost });
+          availableGold -= maintenanceCost; // Update local gold tracker
+          maintenancePaid = true;
+        }
+        
+        const degradationUpdates = applyMonthlyDegradation(building, maintenancePaid);
+        
+        if (degradationUpdates.condition !== building.condition) {
+          dispatch(updateBuilding({ id: building.id, updates: degradationUpdates }));
+          
+          // Notify if building condition becomes concerning
+          const newCondition = degradationUpdates.condition!;
+          const conditionInfo = getConditionCategory(newCondition);
+          
+          if (newCondition < 50 && building.condition >= 50) {
+            events.push(`⚠️ ${building.type}: Condition is now ${conditionInfo.label} (${Math.round(newCondition)}%)`);
+          } else if (newCondition < 25 && building.condition >= 25) {
+            events.push(`🚨 ${building.type}: Building is ${conditionInfo.label}! Non-functional!`);
+          }
+        }
+        
+        // Warn if maintenance could not be paid
+        if (!maintenancePaid && maintenanceCost > 0) {
+          events.push(`⚠️ Could not afford maintenance for ${building.type} (${maintenanceCost}g)`);
         }
       }
     });
@@ -435,6 +554,70 @@ export const DashboardScreen: React.FC = () => {
       }
     });
 
+    // Process loan payments
+    if (activeLoans.length > 0) {
+      activeLoans.forEach(loan => {
+        const canAffordPayment = availableGold >= loan.monthlyPayment;
+        
+        if (canAffordPayment) {
+          // Make payment
+          dispatch(spendGold({
+            amount: loan.monthlyPayment,
+            description: `Loan Payment (${loan.type})`,
+            category: 'Loans',
+            day: (currentYear - 73) * 12 + currentMonth
+          }));
+          dispatch(makePayment({ 
+            loanId: loan.id, 
+            currentMonth, 
+            currentYear 
+          }));
+          expenses.push({ source: `Loan Payment (${loan.type})`, amount: loan.monthlyPayment });
+          availableGold -= loan.monthlyPayment; // Update local tracker
+          
+          // Check if loan is completed
+          if (loan.monthsPaid + 1 >= loan.durationMonths) {
+            events.push(`✅ Loan fully repaid! (${loan.type}-term)`);
+          }
+        } else {
+          // Missed payment
+          dispatch(missPayment({ 
+            loanId: loan.id, 
+            currentMonth, 
+            currentYear 
+          }));
+          
+          // Apply penalties
+          const loanType = LOAN_TYPES[loan.type];
+          dispatch(adjustFavor({ 
+            faction: 'optimates', 
+            amount: -loanType.missedPaymentPenalty.factionFavorLoss 
+          }));
+          
+          events.push(`❌ MISSED LOAN PAYMENT! -${loanType.missedPaymentPenalty.factionFavorLoss} Optimates favor`);
+          
+          // Severe consequences for multiple missed payments
+          if (loan.missedPayments + 1 >= 2) {
+            events.push(`🚨 WARNING: Multiple missed payments! Risk of severe consequences!`);
+          }
+        }
+      });
+    }
+
+    // Process historical events
+    const monthlyEvents = getEventsForMonth(currentYear, currentMonth);
+    if (monthlyEvents.length > 0) {
+      monthlyEvents.forEach(event => {
+        events.push(`📅 ${event.name}: ${event.description}`);
+        
+        // TODO: Apply event effects (will be implemented in integration phase)
+        // For now, just notify about the event
+        event.effects.forEach(effect => {
+          events.push(`  └─ ${effect.description}`);
+        });
+      });
+    }
+
     // Calculate security rating (guards + buildings)
     const guards = employees.filter(e => e.role === 'guard');
     const guardCount = guards.length;
@@ -468,32 +651,25 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Create day report
-    dispatch(setDayReport({
-      day: currentDay,
+    // Recalculate total expenses now that all expenses (wages, food, maintenance, loans) have been added
+    const finalTotalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    
+    // Create month report for the month that just completed (BEFORE advancing)
+    dispatch(setMonthReport({
+      year: currentYear,
+      month: currentMonth,
       income,
       expenses,
-      netGold: totalIncome - totalExpenses,
+      netGold: totalIncome - finalTotalExpenses,
       events,
       alerts,
     }));
-
-    // Advance day
-    dispatch(advanceDay());
-    setProcessingDay(false);
-  }, [dispatch, currentDay, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
-
-  // Get phase icon
-  const getPhaseIcon = (phase: string) => {
-    switch (phase) {
-      case 'dawn': return '🌅';
-      case 'morning': return '☀️';
-      case 'afternoon': return '🌤️';
-      case 'evening': return '🌆';
-      case 'night': return '🌙';
-      default: return '☀️';
-    }
-  };
+    
+    // THEN advance to next month
+    dispatch(advanceMonth());
+    
+    setProcessingMonth(false);
+  }, [dispatch, currentYear, currentMonth, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -523,26 +699,16 @@ export const DashboardScreen: React.FC = () => {
               Welcome, {name}
             </h1>
             <p className="text-roman-marble-400">
-              Day {currentDay} at {ludusName}
+              {getMonthName(currentMonth)}, {currentYear} AD at {ludusName}
             </p>
           </div>
           <div className="text-right">
-            <div className="flex items-center gap-2 text-2xl">
-              <span>{getPhaseIcon(currentPhase)}</span>
-              <span className="font-roman text-roman-gold-400 capitalize">{currentPhase}</span>
-            </div>
-            <div className="flex gap-1 mt-2">
-              {TIME_PHASES.map((phase, idx) => (
-                <div
-                  key={phase}
-                  className={clsx(
-                    'w-3 h-3 rounded-full',
-                    TIME_PHASES.indexOf(currentPhase) >= idx
-                      ? 'bg-roman-gold-500'
-                      : 'bg-roman-marble-700'
-                  )}
-                />
-              ))}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-3xl">{currentSeason.icon}</span>
+                <span className="font-roman text-xl text-roman-gold-400">{currentSeason.name}</span>
+              </div>
+              <span className="text-sm text-roman-marble-500 italic">{currentSeason.latin}</span>
             </div>
           </div>
         </motion.div>
@@ -682,6 +848,71 @@ export const DashboardScreen: React.FC = () => {
             </Card>
           </motion.div>
 
+          {/* Active Loans */}
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle>💰 Active Loans</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeLoans.length === 0 ? (
+                  <div className="text-center py-4">
+                    <div className="text-roman-marble-500 text-sm mb-3">No active loans</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowLoansModal(true)}
+                    >
+                      Take Out a Loan
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {activeLoans.map(loan => {
+                      const remaining = loan.durationMonths - loan.monthsPaid;
+                      const loanType = LOAN_TYPES[loan.type];
+                      return (
+                        <div key={loan.id} className="bg-roman-marble-800 p-3 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="font-roman text-sm text-roman-marble-200">
+                                {loanType.name}
+                              </div>
+                              <div className="text-xs text-roman-marble-500">
+                                {loan.principal}g @ {loan.interestRate}% interest
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-roman-gold-400">
+                                {loan.monthlyPayment}g/month
+                              </div>
+                              <div className="text-xs text-roman-marble-500">
+                                {remaining} months left
+                              </div>
+                            </div>
+                          </div>
+                          {loan.missedPayments > 0 && (
+                            <div className="text-xs text-roman-crimson-400">
+                              ⚠️ {loan.missedPayments} missed payment(s)
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowLoansModal(true)}
+                    >
+                      Take Another Loan
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Quick Actions */}
           <motion.div variants={itemVariants}>
             <Card>
@@ -690,15 +921,15 @@ export const DashboardScreen: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     className="w-full"
                     onClick={() => dispatch(setScreen('marketplace'))}
                   >
                     Visit Marketplace
                   </Button>
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     className="w-full"
                     onClick={() => dispatch(setScreen('arena'))}
                   >
@@ -707,10 +938,10 @@ export const DashboardScreen: React.FC = () => {
                   <Button
                     variant="gold"
                     className="w-full"
-                    onClick={handleEndDay}
-                    disabled={processingDay}
+                    onClick={handleEndMonth}
+                    disabled={processingMonth}
                   >
-                    {processingDay ? 'Processing...' : 'End Day →'}
+                    {processingMonth ? 'Processing...' : 'Advance Month →'}
                   </Button>
                 </div>
               </CardContent>
@@ -765,19 +996,19 @@ export const DashboardScreen: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Day Report Modal */}
+        {/* Month Report Modal */}
         <Modal
-          isOpen={showDayReport}
-          onClose={() => dispatch(hideDayReport())}
-          title={`Day ${lastDayReport?.day || currentDay - 1} Summary`}
+          isOpen={showMonthReport}
+          onClose={() => dispatch(hideMonthReport())}
+          title={`${getMonthName(lastMonthReport?.month || currentMonth)} ${lastMonthReport?.year || currentYear} AD Summary`}
           size="lg"
         >
-          {lastDayReport && (
+          {lastMonthReport && (
             <div className="space-y-6">
               {/* Alerts */}
-              {lastDayReport.alerts.length > 0 && (
+              {lastMonthReport.alerts.length > 0 && (
                 <div className="space-y-2">
-                  {lastDayReport.alerts.map((alert, idx) => (
+                  {lastMonthReport.alerts.map((alert, idx) => (
                     <div
                       key={idx}
                       className={clsx(
@@ -804,11 +1035,11 @@ export const DashboardScreen: React.FC = () => {
                 {/* Income */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-health-high mb-3">Income</h4>
-                  {lastDayReport.income.length === 0 ? (
-                    <div className="text-roman-marble-500 text-sm">No income today</div>
+                  {lastMonthReport.income.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No income this month</div>
                   ) : (
                     <div className="space-y-2">
-                      {lastDayReport.income.map((item, idx) => (
+                      {lastMonthReport.income.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-roman-marble-400">{item.source}</span>
                           <span className="text-health-high">+{item.amount}g</span>
@@ -821,11 +1052,11 @@ export const DashboardScreen: React.FC = () => {
                 {/* Expenses */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-roman-crimson-400 mb-3">Expenses</h4>
-                  {lastDayReport.expenses.length === 0 ? (
-                    <div className="text-roman-marble-500 text-sm">No expenses today</div>
+                  {lastMonthReport.expenses.length === 0 ? (
+                    <div className="text-roman-marble-500 text-sm">No expenses this month</div>
                   ) : (
                     <div className="space-y-2">
-                      {lastDayReport.expenses.map((item, idx) => (
+                      {lastMonthReport.expenses.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-roman-marble-400">{item.source}</span>
                           <span className="text-roman-crimson-400">-{item.amount}g</span>
@@ -839,25 +1070,25 @@ export const DashboardScreen: React.FC = () => {
               {/* Net Gold */}
               <div className={clsx(
                 'p-4 rounded-lg text-center',
-                lastDayReport.netGold >= 0 
+                lastMonthReport.netGold >= 0 
                   ? 'bg-health-high/20 border border-health-high' 
                   : 'bg-roman-crimson-600/20 border border-roman-crimson-600'
               )}>
                 <div className="text-roman-marble-400 text-sm">Net Change</div>
                 <div className={clsx(
                   'font-roman text-2xl',
-                  lastDayReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
+                  lastMonthReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
                 )}>
-                  {lastDayReport.netGold >= 0 ? '+' : ''}{lastDayReport.netGold}g
+                  {lastMonthReport.netGold >= 0 ? '+' : ''}{lastMonthReport.netGold}g
                 </div>
               </div>
 
               {/* Events */}
-              {lastDayReport.events.length > 0 && (
+              {lastMonthReport.events.length > 0 && (
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
                   <h4 className="font-roman text-roman-gold-400 mb-3">Events</h4>
                   <div className="space-y-1 text-sm text-roman-marble-300">
-                    {lastDayReport.events.map((event, idx) => (
+                    {lastMonthReport.events.map((event, idx) => (
                       <div key={idx}>• {event}</div>
                     ))}
                   </div>
@@ -867,10 +1098,203 @@ export const DashboardScreen: React.FC = () => {
               <Button
                 variant="gold"
                 className="w-full"
-                onClick={() => dispatch(hideDayReport())}
+                onClick={() => dispatch(hideMonthReport())}
               >
-                Continue to Day {currentDay}
+                Continue
               </Button>
+            </div>
+          )}
+        </Modal>
+
+        {/* Loans Modal */}
+        <Modal
+          isOpen={showLoansModal}
+          onClose={() => {
+            setShowLoansModal(false);
+            setSelectedLoanType(null);
+            setLoanAmount(0);
+          }}
+          title="💰 Banking Services"
+        >
+          {!selectedLoanType ? (
+            <div className="space-y-4">
+              <p className="text-roman-marble-400 text-sm mb-4">
+                Secure funding from Roman patricians and banking houses. Choose your loan term wisely.
+              </p>
+              {Object.values(LOAN_TYPES).map(loanType => {
+                const monthlyPayment = calculateMonthlyPayment(
+                  loanType.maxAmount,
+                  loanType.interestRate,
+                  loanType.durationMonths
+                );
+                return (
+                  <div
+                    key={loanType.id}
+                    className="bg-roman-marble-800 p-4 rounded-lg cursor-pointer hover:bg-roman-marble-700 transition-colors border border-roman-marble-700 hover:border-roman-gold-500"
+                    onClick={() => {
+                      setSelectedLoanType(loanType.id);
+                      setLoanAmount(loanType.minAmount);
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="font-roman text-lg text-roman-marble-100 mb-1">
+                          {loanType.icon} {loanType.name}
+                        </div>
+                        <div className="text-sm text-roman-marble-400 mb-2">
+                          {loanType.description}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-roman-marble-500">Amount Range</div>
+                        <div className="text-roman-marble-200">
+                          {loanType.minAmount}-{loanType.maxAmount}g
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-roman-marble-500">Duration</div>
+                        <div className="text-roman-marble-200">
+                          {loanType.durationMonths} months
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-roman-marble-500">Interest Rate</div>
+                        <div className="text-roman-marble-200">
+                          {loanType.interestRate}% total
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-roman-marble-500">Monthly Payment</div>
+                        <div className="text-roman-gold-400">
+                          ~{Math.round(monthlyPayment)}g
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-roman-marble-700">
+                      <div className="text-xs text-roman-crimson-400">
+                        {loanType.missedPaymentPenalty.description}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-roman-marble-800 p-4 rounded-lg">
+                <div className="font-roman text-lg text-roman-marble-100 mb-2">
+                  {LOAN_TYPES[selectedLoanType].icon} {LOAN_TYPES[selectedLoanType].name}
+                </div>
+                <div className="text-sm text-roman-marble-400 mb-4">
+                  {LOAN_TYPES[selectedLoanType].description}
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm text-roman-marble-400 block mb-2">
+                      Loan Amount: {loanAmount}g
+                    </label>
+                    <input
+                      type="range"
+                      min={LOAN_TYPES[selectedLoanType].minAmount}
+                      max={LOAN_TYPES[selectedLoanType].maxAmount}
+                      step={50}
+                      value={loanAmount}
+                      onChange={(e) => setLoanAmount(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-roman-marble-500 mt-1">
+                      <span>{LOAN_TYPES[selectedLoanType].minAmount}g</span>
+                      <span>{LOAN_TYPES[selectedLoanType].maxAmount}g</span>
+                    </div>
+                  </div>
+
+                  <div className="divider-roman" />
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-roman-marble-500">Monthly Payment</div>
+                      <div className="text-roman-gold-400 font-roman text-lg">
+                        {calculateMonthlyPayment(
+                          loanAmount,
+                          LOAN_TYPES[selectedLoanType].interestRate,
+                          LOAN_TYPES[selectedLoanType].durationMonths
+                        )}g
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-roman-marble-500">Total Repayment</div>
+                      <div className="text-roman-marble-200 font-roman text-lg">
+                        {calculateTotalRepayment(
+                          loanAmount,
+                          LOAN_TYPES[selectedLoanType].interestRate
+                        )}g
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-roman-marble-500">Interest Cost</div>
+                      <div className="text-roman-crimson-400">
+                        {Math.round(loanAmount * (LOAN_TYPES[selectedLoanType].interestRate / 100))}g
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-roman-marble-500">Duration</div>
+                      <div className="text-roman-marble-200">
+                        {LOAN_TYPES[selectedLoanType].durationMonths} months
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-roman-crimson-900/20 border border-roman-crimson-800 p-3 rounded">
+                    <div className="text-xs text-roman-crimson-400">
+                      ⚠️ {LOAN_TYPES[selectedLoanType].missedPaymentPenalty.description}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSelectedLoanType(null);
+                    setLoanAmount(0);
+                  }}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="gold"
+                  onClick={() => {
+                    if (selectedLoanType && loanAmount > 0) {
+                      const loanType = LOAN_TYPES[selectedLoanType];
+                      dispatch(takeLoan({
+                        type: selectedLoanType,
+                        amount: loanAmount,
+                        interestRate: loanType.interestRate,
+                        durationMonths: loanType.durationMonths,
+                        currentMonth,
+                        currentYear,
+                      }));
+                      dispatch(addGold({
+                        amount: loanAmount,
+                        description: `Loan: ${loanType.name}`,
+                        category: 'Loans',
+                        day: (currentYear - 73) * 12 + currentMonth,
+                      }));
+                      setShowLoansModal(false);
+                      setSelectedLoanType(null);
+                      setLoanAmount(0);
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  Accept Loan
+                </Button>
+              </div>
             </div>
           )}
         </Modal>

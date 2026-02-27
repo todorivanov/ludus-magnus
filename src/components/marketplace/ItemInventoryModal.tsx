@@ -23,7 +23,8 @@ export const ItemInventoryModal: React.FC<ItemInventoryModalProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { purchasedItems } = useAppSelector(state => state.marketplace);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null);
 
   const availableItems = purchasedItems

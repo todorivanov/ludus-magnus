@@ -13,6 +13,11 @@ import {
   type TrainingType,
   type NutritionQuality,
 } from '@data/training';
+import {
+  calculateAge,
+  calculateStatDecline,
+  checkForDeath,
+} from '@/utils/ageSystem';
 
 // Time phases in a day
 export type TimePhase = 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night';
@@ -162,13 +167,87 @@ export const processGladiatorDay = (
   gladiator: Gladiator,
   isTraining: boolean,
   isResting: boolean,
-  staffBonuses: StaffBonuses = {}
+  staffBonuses: StaffBonuses = {},
+  currentYear: number = 73,
+  currentMonth: number = 1
 ): {
   updates: Partial<Gladiator>;
   events: string[];
+  died?: boolean; // Flag if gladiator died from old age
 } => {
   const events: string[] = [];
   const updates: Partial<Gladiator> = {};
+  
+  // === AGE & CAREER PROCESSING ===
+  // Update months of service
+  if (gladiator.monthsOfService !== undefined) {
+    updates.monthsOfService = gladiator.monthsOfService + 1;
+  }
+  
+  // Calculate current age and check for birthday
+  if (gladiator.birthYear !== undefined && gladiator.birthMonth !== undefined) {
+    const newAge = calculateAge(
+      gladiator.birthYear,
+      gladiator.birthMonth,
+      currentYear,
+      currentMonth
+    );
+    
+    // If age changed (birthday happened), log it
+    if (newAge !== gladiator.age) {
+      updates.age = newAge;
+      events.push(`🎂 Turned ${newAge} years old!`);
+    }
+    
+    // Apply monthly stat decline for aging gladiators (30+)
+    const currentAge = newAge;
+    if (currentAge >= 30) {
+      const statDecline = calculateStatDecline(currentAge);
+      
+      // Apply decline to current stats (can't go below 10)
+      const newStats = { ...gladiator.stats };
+      let hasDecline = false;
+      
+      (Object.keys(statDecline) as Array<keyof typeof statDecline>).forEach(stat => {
+        const decline = statDecline[stat];
+        if (decline < 0) {
+          newStats[stat] = Math.max(10, newStats[stat] + decline);
+          hasDecline = true;
+        }
+      });
+      
+      if (hasDecline) {
+        updates.stats = newStats;
+        
+        // Update derived stats
+        const constitutionChanged = statDecline.constitution < 0;
+        const enduranceChanged = statDecline.endurance < 0;
+        
+        if (constitutionChanged) {
+          const newMaxHP = 50 + Math.floor(newStats.constitution * 1.5);
+          updates.maxHP = newMaxHP;
+          updates.currentHP = Math.min(gladiator.currentHP, newMaxHP);
+        }
+        
+        if (enduranceChanged) {
+          const newMaxStamina = 30 + Math.floor(newStats.endurance * 1.2);
+          updates.maxStamina = newMaxStamina;
+          updates.currentStamina = Math.min(gladiator.currentStamina, newMaxStamina);
+        }
+        
+        events.push(`⏳ Age is taking its toll... physical abilities declining`);
+      }
+    }
+    
+    // Check for death from old age
+    if (checkForDeath(currentAge)) {
+      return {
+        updates,
+        events: [...events, `💀 ${gladiator.name} has died from old age at ${currentAge} years old.`],
+        died: true
+      };
+    }
+  }
   
   // Get nutrition level (default to standard)
   const nutritionLevel = (gladiator.nutrition || 'standard') as NutritionQuality;
@@ -233,13 +312,15 @@ export const processGladiatorDay = (
       // Get doctore training XP bonus
       const trainingXPBonus = (staffBonuses.trainingXP || 0) / 100;
       
-      // Calculate and apply XP gain with doctore bonus
+      // Calculate and apply XP gain with doctore bonus and age modifier
       let xpGain = calculateXPGain(
         trainingType,
         gladiator.level,
         nutritionLevel,
         moraleForCalc,
-        fatiguePercent
+        fatiguePercent,
+        0, // buildingBonus
+        gladiator.age
       );
       
       // Apply doctore bonus

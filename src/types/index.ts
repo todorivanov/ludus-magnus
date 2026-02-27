@@ -93,6 +93,16 @@ export interface Gladiator {
   skillPoints: number;
   skills: GladiatorSkill[];
   
+  // Age & Career
+  age: number;           // Years old
+  birthYear: number;     // Year born
+  birthMonth: number;    // Month born (1-12)
+  careerStartYear: number;
+  careerStartMonth: number;
+  monthsOfService: number;
+  milestones: Array<{ id: string; achievedYear: number; achievedMonth: number }>;
+  titles: string[];
+  
   // Injuries
   injuries: Injury[];
   
@@ -165,6 +175,11 @@ export interface Building {
   constructionDaysRemaining: number;
   isUpgrading: boolean;
   upgradeDaysRemaining: number;
+  
+  // Maintenance & Degradation
+  condition: number; // 0-100, percentage of building health
+  lastMaintenanceMonth?: number; // Track when maintenance was last paid
+  maintenanceCost: number; // Monthly maintenance cost in gold
 }
 
 // ==========================================

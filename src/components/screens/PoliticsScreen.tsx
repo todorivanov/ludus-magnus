@@ -42,7 +42,8 @@ export const PoliticsScreen: React.FC = () => {
   const protectionLevel = factionsState?.protectionLevel || 0;
   
   const { gold } = useAppSelector(state => state.player);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const questsState = useAppSelector(state => state.quests);
   const activeQuests = questsState?.activeQuests || [];
   const currentLudusFame = useAppSelector(state => state.fame?.ludusFame || 0);

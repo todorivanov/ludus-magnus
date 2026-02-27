@@ -17,7 +17,8 @@ export const ArenaScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { roster } = useAppSelector(state => state.gladiators);
   const { gold } = useAppSelector(state => state.player);
-  const { currentDay } = useAppSelector(state => state.game);
+  const gameState = useAppSelector(state => state.game);
+  const currentDay = ((gameState?.currentYear ?? 73) - 73) * 12 + (gameState?.currentMonth ?? 1);
   const { activeTournament } = useAppSelector(state => state.tournaments);
 
   const [activeTab, setActiveTab] = useState<'fights' | 'tournaments'>('fights');

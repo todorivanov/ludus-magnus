@@ -8,10 +8,180 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
+- Event effect application system (market price changes, stat modifiers, etc.)
+- Advanced loan features (early payoff, refinancing)
+- Bulk maintenance payment options
 - Sound effects and music
 - Additional gladiator classes
 - More story content
-- Multiplayer features (future consideration)
+- Expanded historical events
+
+---
+
+## [1.4.0] - 2026-02-27
+
+Major expansion adding comprehensive time-based systems that leverage the monthly game cycle for strategic depth and immersion.
+
+### Added
+
+#### Gladiator Aging System
+- **Age Tracking**: All gladiators now have age, birth date, and career start tracking
+- **Age-Based Development**:
+  - Youth (15-19): Fast learners (+25% XP), weaker stats
+  - Prime (20-29): Optimal performance, standard XP gain
+  - Veteran (30-35): Experience vs. decline (-10% XP, slow stat decline)
+  - Aging (36-40): Significant decline (-25% XP, moderate stat decline)
+  - Old (41+): High death risk (-40% XP, severe stat decline)
+- **Monthly Stat Decline**: Gladiators 30+ experience gradual physical decline
+  - Agility and endurance decline fastest
+  - Constitution most resistant to aging
+- **Death from Old Age**: Monthly probability check for gladiators 30+
+  - Veteran: 0.1% per month
+  - Aging: 0.5% per month  
+  - Old: 2% per month
+- **Age-Based Pricing**: Market prices adjusted based on gladiator age
+- **Birthday Celebrations**: Gladiators celebrate birthdays with morale boost
+
+#### Banking & Loan System
+- **Three Loan Types**:
+  - Short-term (6 months): 100-500 gold at 15% interest
+  - Medium-term (12 months): 500-2000 gold at 25% interest
+  - Long-term (24 months): 2000-5000 gold at 40% interest
+- **Automatic Monthly Payments**: Loans deducted automatically each month
+- **Missed Payment Penalties**: Faction favor loss and risk of sabotage/building seizure
+- **Loan History Tracking**: Complete record of all loan activity
+
+#### Building Maintenance System
+- **Condition Tracking**: Buildings have 0-100% condition
+- **Monthly Degradation**:
+  - Base: -2% per month without maintenance
+  - Maintained: -0.5% per month
+  - Neglected: -5% per month
+- **Effectiveness Based on Condition**:
+  - Excellent (100%): Full effectiveness
+  - Good (75-99%): Normal operation
+  - Fair (50-74%): -25% effectiveness
+  - Poor (25-49%): -50% effectiveness
+  - Dilapidated (<25%): Non-functional
+- **Maintenance Costs**: Monthly costs based on building type and level
+  - Basic buildings: 5-10 gold/month
+  - Advanced buildings: 15-25 gold/month
+  - Luxury buildings: 30-50 gold/month
+
+#### Historical Events Calendar
+- **Major Fixed Events**: Scripted historical events at specific dates
+  - 79 AD (Augustus): Mount Vesuvius eruption
+  - 80 AD (Julius): Colosseum grand opening
+  - 84 AD (Januarius): Domitian's reign of terror
+- **Annual Recurring Events**:
+  - Saturnalia (December): Winter festival with morale boost
+  - Ludi Romani (September): Great Games with fame bonuses
+  - Imperial Taxes (Aprilis): 10% gold tax collection
+  - Munera Gladiatoria (Martius): Traditional games
+- **Random Monthly Events**: Probability-based events
+  - Plague outbreaks, imperial visits, trade disruptions
+  - Wealthy patrons, rival challenges, bountiful harvests
+  - Some events are season-specific
+
+#### Gladiator Career Milestones
+- **Time-Based Milestones**:
+  - 6 months: "Tiro" title (+morale)
+  - 12 months: "Veteran" title (+25 fame)
+  - 24 months: "Champion" title (+50 fame, +stat bonuses)
+  - 36 months: "Legend" title (+100 fame, +500 gold)
+  - Birthday celebrations (annual)
+- **Achievement Milestones**:
+  - First Victory: +10 fame
+  - 10 Victories: "Victor" badge (+25 fame)
+  - 25 Victories: "Conqueror" badge (+50 fame, +200 gold)
+  - 50 Victories: "Immortal" badge (+100 fame, +500 gold, +stat bonuses)
+  - Undefeated streaks (5, 10 fights)
+- **Survival Milestones**:
+  - Age 35: "Survivor" (+50 fame)
+  - Age 40: "Living Legend" (+100 fame, +400 gold)
+- **Milestone Rewards**: Automatic fame, gold, stat bonuses, and title awards
+- **Career Tracking**: Complete history of achievements
+
+### Changed
+- **Gladiator Generation**: New gladiators assigned age and birth date
+  - Age ranges vary by origin (POW: 18-29, Criminal: 20-34, Volunteer: 18-37, Elite: 22-29)
+  - Purchase prices adjusted based on age
+- **Training System**: XP gains now modified by gladiator age
+- **Sell Value**: Gladiator age factored into resale calculations
+- **Store Configuration**: Removed migration code (no backwards compatibility needed)
+
+### UI Enhancements
+- **Dashboard**: 
+  - Added Active Loans card showing all loans, payments, and remaining duration
+  - Loan modal for taking out new loans with detailed term selection
+  - Loan payment tracking with missed payment warnings
+- **Gladiator Screens**: 
+  - Age displayed with color-coded categories (Youth/Prime/Veteran/Aging/Old)
+  - Career titles shown in header
+- **Marketplace**:
+  - Age and category shown for all purchasable gladiators
+  - Color-coded age indicators
+- **Ludus Management**:
+  - Maintenance summary card showing all building conditions
+  - Building condition bars on each building card
+  - Maintenance modal for repairing individual buildings
+  - Minor and major repair options with cost calculations
+
+### Technical
+- New utility systems: `ageSystem.ts`, `buildingMaintenance.ts`, `milestoneSystem.ts`
+- New data files: `loans.ts`, `historicalEvents.ts`
+- New Redux slice: `loansSlice.ts`
+- Extended types: Age & career fields added to Gladiator, condition & maintenance to Building
+- Enhanced GameLoop: Monthly processing for aging, milestones, building degradation, and loans
+- Comprehensive milestone and event checking systems integrated
+
+### Notes
+- Event effects are logged but full application system pending
+- All core systems are functional and tested
+
+---
+
+## [1.3.0] - 2026-02-13
+
+Major time system overhaul changing the game cycle from daily to monthly progression with full year/month tracking.
+
+### Changed
+- **Monthly Game Cycle**: Complete conversion from daily to monthly time progression
+  - Game now advances month by month instead of day by day
+  - Time displayed as Roman month names with year: "Januarius, 73 AD"
+  - Game starts in **Januarius (January), 73 AD** - the year of the Colosseum construction
+  - Years and months tracked separately for better immersion and historical accuracy
+  - Month transitions properly handle year rollover (December → January of next year)
+  
+- **UI Updates**:
+  - MainLayout header now shows current month and year in Roman style
+  - "Advance Day" button changed to "Advance Month"
+  - Month report modal replaces day report modal
+  - Mobile view shows abbreviated month names (e.g., "Jan 73")
+  - Roman month names used throughout:
+    - Januarius, Februarius, Martius, Aprilis, Maius, Junius
+    - Julius, Augustus, September, October, November, December
+    
+- **Economic Adjustments**:
+  - All costs and income scaled to monthly cycle
+  - Food costs: ~60g per gladiator per month (2g/day × 30)
+  - Staff wages remain the same but paid monthly
+  - Building construction and upgrades progress monthly
+  - Resource consumption balanced for monthly scale
+
+- **Technical**:
+  - Game state now stores `currentYear` and `currentMonth` instead of `currentDay`
+  - Backward compatibility maintained with `yearMonthToDay()` helper function
+  - All game systems updated to work with new time model
+  - Save games from previous versions will automatically migrate
+  - New selectors: `selectCurrentYear()`, `selectCurrentMonth()`
+  - Helper functions: `getMonthName()`, `formatGameDate()`, `yearMonthToDay()`
+
+### Fixed
+- Time-based calculations properly scale to monthly progression
+- Cooldowns and timers adjusted for new time scale
+- Quest progression and objectives work with monthly cycle
+- Tournament scheduling compatible with monthly system
 
 ---
 
@@ -488,7 +658,8 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.2.1 | 2026-02-13 | QoL improvements: injury display, healing fixes, sell value calculation |
+| 1.3.0 | 2026-02-13 | Monthly game cycle: Year/month tracking, Roman calendar, time system overhaul |
+| 1.2.1 | 2026-02-13 | Unified gladiator management, layout optimization, bug fixes |
 | 1.2.0 | 2026-02-13 | Marketplace expansion: 35+ items, tournament system, 13 new buildings |
 | 1.1.0 | 2026-02-05 | Major content expansion: 12 chapters, branching storylines, 35+ quests, bug fixes |
 | 1.0.6 | 2026-02-05 | Staff XP system, death system, fallen memorial, auto level-up |
