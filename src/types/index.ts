@@ -5,10 +5,15 @@
 // Difficulty levels
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
+// Game mode
+export type GameMode = 'lanista' | 'gladiator';
+
 // Game screen states
 export type GameScreen = 
   | 'title' 
+  | 'modeSelect'
   | 'newGame' 
+  | 'newGameGladiator'
   | 'dashboard' 
   | 'ludus' 
   | 'gladiators'
@@ -22,7 +27,13 @@ export type GameScreen =
   | 'politics'
   | 'quests'
   | 'settings'
-  | 'codex';
+  | 'codex'
+  | 'gladiatorDashboard'
+  | 'gladiatorTraining'
+  | 'gladiatorLudusLife'
+  | 'gladiatorArena'
+  | 'gladiatorFreedom'
+  | 'gladiatorPeculium';
 
 // ==========================================
 // GLADIATOR TYPES
@@ -507,4 +518,137 @@ export interface CompletedTournament {
   }[];
   totalGoldEarned: number;
   totalFameEarned: number;
+}
+
+// ==========================================
+// GLADIATOR MODE TYPES
+// ==========================================
+
+export type GladiatorModeOrigin = 'pow' | 'criminal' | 'volunteer' | 'slave';
+
+export type GladiatorModeRegion = 
+  | 'gaul' | 'thrace' | 'germania' | 'britannia' 
+  | 'numidia' | 'hispania' | 'greece' | 'rome';
+
+export type DominusPersonality = 'fair' | 'harsh' | 'cruel' | 'indulgent' | 'ambitious';
+
+export type CompanionPersonality = 'aggressive' | 'cunning' | 'loyal' | 'bitter' | 'jovial';
+
+export type CompanionRelationshipTier = 'enemy' | 'rival' | 'neutral' | 'friend' | 'brother';
+
+export type FreedomPath = 'glory' | 'coin' | 'patronage' | 'mercy';
+
+export type GladiatorMonthPhase = 'orders' | 'living' | 'arena' | 'aftermath';
+
+export type DominusOrderType = 
+  | 'train' | 'fight' | 'rest' | 'spar_partner' | 'punishment';
+
+export interface DominusOrder {
+  type: DominusOrderType;
+  description: string;
+  trainingRegimen?: string;
+  targetCompanionId?: string;
+  matchType?: string;
+}
+
+export interface Dominus {
+  name: string;
+  personality: DominusPersonality;
+  ludusName: string;
+  wealth: number;
+  favor: number; // 0-100, how much the dominus likes you
+  politicalConnections: number; // 0-100, affects missio chances
+}
+
+export interface Companion {
+  id: string;
+  gladiator: Gladiator;
+  relationship: number; // -100 to 100
+  personality: CompanionPersonality;
+  rank: 'tiro' | 'veteran' | 'champion';
+  isAlive: boolean;
+  soldAway: boolean;
+  freed: boolean;
+}
+
+export interface LudusConditions {
+  foodQuality: 'poor' | 'standard' | 'good' | 'excellent';
+  trainingQuality: 'poor' | 'standard' | 'good' | 'excellent';
+  medicalCare: 'poor' | 'standard' | 'good' | 'excellent';
+  security: 'low' | 'medium' | 'high';
+}
+
+export interface FreedomProgress {
+  totalLibertas: number; // 0-1000
+  gloryPoints: number;
+  coinSaved: number;
+  manumissionPrice: number;
+  patronageFavor: number;
+  patronId?: string;
+  dominusMercyEligible: boolean;
+  chosenPath?: FreedomPath;
+}
+
+export interface GladiatorModeEvent {
+  id: string;
+  title: string;
+  description: string;
+  type: 'gift' | 'punishment' | 'feast' | 'companion_sold' | 'new_arrival' 
+    | 'illness' | 'rumor' | 'sparring_accident' | 'visitor' | 'dream' 
+    | 'escape_attempt' | 'gambling' | 'forced_fight_companion';
+  targetCompanionId?: string;
+  choices?: {
+    id: string;
+    text: string;
+    effects: {
+      morale?: number;
+      health?: number;
+      peculium?: number;
+      dominusFavor?: number;
+      obedience?: number;
+      libertas?: number;
+      companionRelationship?: { companionId: string; amount: number };
+    };
+  }[];
+}
+
+export interface PeculiumTransaction {
+  id: string;
+  month: number;
+  year: number;
+  amount: number;
+  source: string;
+}
+
+export interface GladiatorModeState {
+  playerGladiator: Gladiator | null;
+  origin: GladiatorModeOrigin;
+  region: GladiatorModeRegion;
+  
+  dominus: Dominus;
+  previousDomini: string[];
+  timesSold: number;
+  
+  companions: Companion[];
+  
+  freedom: FreedomProgress;
+  
+  peculium: number;
+  peculiumHistory: PeculiumTransaction[];
+  
+  currentOrder: DominusOrder | null;
+  monthPhase: GladiatorMonthPhase;
+  
+  monthsInCurrentLudus: number;
+  totalMonthsServed: number;
+  
+  pendingEvent: GladiatorModeEvent | null;
+  eventHistory: string[];
+  
+  storyChapter: number;
+  completedStoryChapters: number[];
+  
+  trainedThisMonth: boolean;
+  interactionsThisMonth: number;
+  foughtThisMonth: boolean;
 }

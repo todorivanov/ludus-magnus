@@ -36,8 +36,14 @@ export const SettingsScreen: React.FC = () => {
     { value: 'hard', label: 'Champion', description: 'Less gold, tougher opponents' },
   ];
 
+  const gameMode = gameState?.gameMode || 'lanista';
+
   const handleBack = () => {
-    dispatch(setScreen(currentScreen === 'title' ? 'title' : 'dashboard'));
+    if (currentScreen === 'title') {
+      dispatch(setScreen('title'));
+    } else {
+      dispatch(setScreen(gameMode === 'gladiator' ? 'gladiatorDashboard' : 'dashboard'));
+    }
   };
 
   const handleReset = () => {

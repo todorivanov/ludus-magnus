@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { GameScreen, Difficulty, GameSettings } from '@/types';
+import type { GameScreen, Difficulty, GameSettings, GameMode } from '@/types';
 
 type TimePhase = 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night';
 
@@ -19,6 +19,9 @@ interface MonthReport {
 }
 
 interface ExtendedGameState {
+  // Game mode
+  gameMode: GameMode;
+  
   // Time tracking
   currentYear: number;
   currentMonth: number; // 1-12 (January = 1, December = 12)
@@ -56,6 +59,7 @@ const initialSettings: GameSettings = {
 };
 
 const initialState: ExtendedGameState = {
+  gameMode: 'lanista',
   currentYear: 73, // 73 AD - Year of the Colosseum construction
   currentMonth: 1, // January
   currentPhase: 'morning',
@@ -78,6 +82,11 @@ const gameSlice = createSlice({
   name: 'game',
   initialState,
   reducers: {
+    // Game mode
+    setGameMode: (state, action: PayloadAction<GameMode>) => {
+      state.gameMode = action.payload;
+    },
+    
     // Navigation
     setScreen: (state, action: PayloadAction<GameScreen>) => {
       state.currentScreen = action.payload;
@@ -197,11 +206,12 @@ const gameSlice = createSlice({
     },
     
     // New game / Reset
-    startNewGame: (state, action: PayloadAction<{ difficulty: Difficulty }>) => {
+    startNewGame: (state, action: PayloadAction<{ difficulty: Difficulty; gameMode?: GameMode }>) => {
+      state.gameMode = action.payload.gameMode || 'lanista';
       state.currentYear = 73; // 73 AD
       state.currentMonth = 1; // January
       state.currentPhase = 'morning';
-      state.currentScreen = 'dashboard';
+      state.currentScreen = state.gameMode === 'gladiator' ? 'gladiatorDashboard' : 'dashboard';
       state.isPaused = false;
       state.isGameOver = false;
       state.gameOverReason = undefined;
@@ -220,6 +230,7 @@ const gameSlice = createSlice({
 });
 
 export const {
+  setGameMode,
   setScreen,
   advanceDay, // Kept for backward compatibility
   advanceMonth,
@@ -250,6 +261,7 @@ export const {
 } = gameSlice.actions;
 
 // Selectors
+export const selectGameMode = (state: { game: ExtendedGameState }) => state.game.gameMode;
 export const selectCurrentYear = (state: { game: ExtendedGameState }) => state.game.currentYear;
 export const selectCurrentMonth = (state: { game: ExtendedGameState }) => state.game.currentMonth;
 export const selectCurrentPhase = (state: { game: ExtendedGameState }) => state.game.currentPhase;

@@ -25,6 +25,7 @@ import questsReducer from '@features/quests/questsSlice';
 import tournamentsReducer from '@features/tournaments/tournamentsSlice';
 import marketplaceReducer from '@features/marketplace/marketplaceSlice';
 import loansReducer from '@features/loans/loansSlice';
+import gladiatorModeReducer from '@features/gladiatorMode/gladiatorModeSlice';
 
 // Combine all reducers
 const rootReducer = combineReducers({
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
   tournaments: tournamentsReducer,
   marketplace: marketplaceReducer,
   loans: loansReducer,
+  gladiatorMode: gladiatorModeReducer,
 });
 
 // Persist configuration
@@ -48,7 +50,7 @@ const persistConfig = {
   key: 'ludus-magnus-reborn',
   version: 1,
   storage,
-  whitelist: ['game', 'player', 'gladiators', 'ludus', 'staff', 'economy', 'fame', 'factions', 'quests', 'tournaments', 'marketplace', 'loans'],
+  whitelist: ['game', 'player', 'gladiators', 'ludus', 'staff', 'economy', 'fame', 'factions', 'quests', 'tournaments', 'marketplace', 'loans', 'gladiatorMode'],
   blacklist: ['combat'], // Don't persist combat state
 };
 

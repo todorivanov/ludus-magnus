@@ -220,11 +220,13 @@ export const CodexScreen: React.FC = () => {
   const unlockedCount = categoryEntries.filter(e => e.unlocked).length;
   const totalCount = categoryEntries.length;
 
+  const gameMode = useAppSelector(state => state.game?.gameMode || 'lanista');
+
   const handleBack = () => {
     if (selectedEntry) {
       setSelectedEntry(null);
     } else {
-      dispatch(setScreen('dashboard'));
+      dispatch(setScreen(gameMode === 'gladiator' ? 'gladiatorDashboard' : 'dashboard'));
     }
   };
 

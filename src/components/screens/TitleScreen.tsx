@@ -44,12 +44,14 @@ export const TitleScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const gameMode = useAppSelector(state => state.game?.gameMode || 'lanista');
+
   const handleNewGame = () => {
-    dispatch(setScreen('newGame'));
+    dispatch(setScreen('modeSelect'));
   };
 
   const handleContinue = () => {
-    dispatch(setScreen('dashboard'));
+    dispatch(setScreen(gameMode === 'gladiator' ? 'gladiatorDashboard' : 'dashboard'));
   };
 
   // Container variants for staggered animations

@@ -18,6 +18,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-03-02
+
+Major expansion adding a complete second gamemode — play as a gladiator fighting for survival and freedom.
+
+### Added
+
+#### Gladiator Gamemode
+- **Mode Selection Screen**: Choose between Lanista (manage a ludus) or Gladiator (fight for freedom) at game start
+- **Character Creation**: 5-step gladiator creation — origin (POW, Criminal, Volunteer, Slave), name, region of origin (8 regions), fighting class (8 classes), and stat allocation with 10 bonus points
+- **Gladiator Dashboard**: Personal cell view with vitals (HP, stamina, morale, fatigue), stats, combat record, current orders, story progress, dominus favor, and freedom meter
+- **Status Alerts**: Color-coded condition banners (injured, exhausted, low morale, low stamina, peak condition) visible at top of dashboard
+
+#### Dominus AI System
+- **Monthly Orders**: AI-controlled dominus issues orders each month — train, fight, rest, spar as partner, or punishment
+- **Personality Types**: 5 dominus personalities (Fair, Harsh, Cruel, Indulgent, Ambitious) affecting order frequency, punishment severity, and food quality
+- **Obedience Tracking**: Game tracks whether you actually followed orders (trained, fought) and penalizes disobedience with favor loss
+- **Performance Evaluation**: Dominus evaluates wins, obedience, and crowd favor monthly, adjusting favor accordingly
+- **Being Sold**: Dominus sells you if favor drops too low — new ludus, new companions, new dominus personality
+
+#### Companion System
+- **Ludus NPCs**: 4-8 AI gladiators in your ludus with name, class, level, stats, personality (Aggressive, Cunning, Loyal, Bitter, Jovial), and rank (Tiro, Veteran, Champion)
+- **Relationships**: -100 to 100 relationship score with each companion, displayed as tiers (Enemy, Rival, Neutral, Friend, Brother)
+- **Interactions**: Spar (XP + injury risk), Talk (morale + rumors), Challenge (dominance) — 2 interactions per month
+- **Companion Events**: Companions can be sold away (actually removed from roster), killed, or freed
+
+#### Arena Combat (Gladiator Mode)
+- **Full Combat UI**: Matches the lanista combat screen — 3-column layout with animated class icons, ProgressBar HP/stamina, status effects, animated combat log with color-coded entries
+- **Action System**: All 7 combat actions (attack, heavy attack, defend, dodge, special, rest, taunt) with proper stamina costs, cooldowns, and class-specific specials
+- **Crowd Favor**: Dynamic crowd favor meter (0-100) that changes based on your combat actions — flashy moves earn favor, defensive play loses it
+- **Missio Mechanic**: When you defeat an opponent, choose to spare or kill; when you lose, crowd favor determines if you receive mercy or die (game over)
+- **Async Combat Resolution**: Log entries animate sequentially with delays for dramatic effect
+
+#### Freedom System (Path to the Rudis)
+- **Libertas Tracker**: 0-1000 progress meter toward freedom with named tiers (Unknown, Survivor, Known Name, Crowd's Favorite, Renowned, On the Threshold)
+- **Four Paths to Freedom**:
+  - Path of Glory (Via Gloriae): 50 wins + 500 fame
+  - Path of Coin (Via Pecuniae): Save enough peculium to buy freedom (price scales with your value)
+  - Path of Patronage (Via Patroni): Attract a political patron through fame
+  - Path of Mercy (Via Misericordiae): Dominus favor 90+ after 36+ months and 200+ fame
+- **Freedom Trigger**: When chosen path requirements are met, triggers the Rudis ceremony with path-specific narrative and career statistics
+- **Peculium**: Personal fund from crowd tips, gambling, and gifts — tracked with full transaction history
+
+#### Training (Gladiator Mode)
+- **8 Training Regimens**: Palus Drill, Sparring, Endurance, Agility, Strength, Tactics, Weapon Mastery, Showmanship — each with unique XP, stat gains, fatigue, and injury risk
+- **Assigned vs Sneak Training**: Dominus assigns a regimen; training a different one risks being caught and losing favor
+- **Skill Point Allocation**: Spend skill points (earned on level up) on any of the 5 stats with a dedicated allocation panel
+- **Monthly Limit**: One training session per month, tracked in Redux to persist across screen navigation
+
+#### Story & Events
+- **10 Story Chapters**: The Auction Block, Tiro, Blood and Sand, Brotherhood of the Damned, The Champion's Shadow, Sold!, Rise to Fame, A Patron's Game, The Price of Freedom, The Rudis — with progressive objectives and rewards
+- **12 Random Event Types**: Gift from a fan, punishment, feast, companion sold, new arrival, illness, rumor, sparring accident, visitor, dream of freedom, escape attempt (with moral choices), gambling
+- **Event Choices**: Most events offer 2-3 choices with different consequences (morale, favor, peculium, relationships)
+
+#### UI & Navigation
+- **Gladiator Layout**: Full sidebar navigation matching the lanista MainLayout — collapsible desktop sidebar, mobile hamburger menu with slide-out drawer, bottom nav bar, dominus favor indicator
+- **7 Navigation Screens**: Cell (dashboard), Training, Ludus Life, Arena, Freedom, Peculium, Codex
+- **Top Bar**: Player name, ludus name, date, peculium, libertas, fame, settings
+
+### Fixed
+- Codex and Settings "back" buttons now return to the correct dashboard based on game mode
+- Training and interaction limits persisted in Redux instead of local state (no longer reset when switching screens)
+- Combat winner detection uses gladiator name (matching CombatEngine) instead of ID
+- Fight completion tracked per month to prevent re-fighting
+- Month-end processing checks actual obedience (did you train/fight as ordered) instead of auto-assuming compliance
+- Stamina now restores (30% of max) during monthly natural recovery
+- `foughtThisMonth` flag properly resets on month advance
+- Companion sold events now actually remove the companion from the ludus roster
+- `interactionsThisMonth` counter handles undefined state from save migration (no more NaN)
+
+### Changed
+- Title screen "New Game" now routes to mode selection screen
+- Title screen "Continue" respects current game mode (gladiator or lanista dashboard)
+- Base font size increased from 16px to 17px for improved readability
+- Game state extended with `gameMode` field (`'lanista' | 'gladiator'`)
+- Store updated with `gladiatorMode` reducer and persistence
+
+---
+
 ## [1.4.0] - 2026-02-27
 
 Major expansion adding comprehensive time-based systems that leverage the monthly game cycle for strategic depth and immersion.

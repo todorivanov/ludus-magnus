@@ -2,6 +2,7 @@ import React from 'react';
 import { useAppSelector } from '@app/hooks';
 import { 
   TitleScreen, 
+  ModeSelectScreen,
   NewGameScreen, 
   DashboardScreen,
   MarketplaceScreen,
@@ -16,18 +17,28 @@ import {
   QuestsScreen,
   SettingsScreen,
   CodexScreen,
+  NewGameGladiatorScreen,
+  GladiatorDashboardScreen,
+  GladiatorTrainingScreen,
+  GladiatorLudusLifeScreen,
+  GladiatorArenaScreen,
+  GladiatorFreedomScreen,
+  GladiatorPeculiumScreen,
 } from '@components/screens';
 
 const App: React.FC = () => {
   const currentScreen = useAppSelector(state => state.game?.currentScreen || 'title');
 
-  // Render the appropriate screen based on game state
   const renderScreen = () => {
     switch (currentScreen) {
       case 'title':
         return <TitleScreen />;
+      case 'modeSelect':
+        return <ModeSelectScreen />;
       case 'newGame':
         return <NewGameScreen />;
+      case 'newGameGladiator':
+        return <NewGameGladiatorScreen />;
       case 'dashboard':
         return <DashboardScreen />;
       case 'ludus':
@@ -35,7 +46,6 @@ const App: React.FC = () => {
       case 'gladiators':
         return <GladiatorsScreen />;
       case 'training':
-        // Training functionality now integrated into GladiatorsScreen
         return <GladiatorsScreen />;
       case 'staff':
         return <StaffScreen />;
@@ -57,6 +67,19 @@ const App: React.FC = () => {
         return <SettingsScreen />;
       case 'codex':
         return <CodexScreen />;
+      // Gladiator mode screens
+      case 'gladiatorDashboard':
+        return <GladiatorDashboardScreen />;
+      case 'gladiatorTraining':
+        return <GladiatorTrainingScreen />;
+      case 'gladiatorLudusLife':
+        return <GladiatorLudusLifeScreen />;
+      case 'gladiatorArena':
+        return <GladiatorArenaScreen />;
+      case 'gladiatorFreedom':
+        return <GladiatorFreedomScreen />;
+      case 'gladiatorPeculium':
+        return <GladiatorPeculiumScreen />;
       default:
         return <TitleScreen />;
     }

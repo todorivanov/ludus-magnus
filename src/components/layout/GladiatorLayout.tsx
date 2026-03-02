@@ -5,40 +5,42 @@ import { setScreen, getMonthName } from '@features/game/gameSlice';
 import type { GameScreen } from '@/types';
 import { clsx } from 'clsx';
 import { Tooltip } from '@components/ui';
+import { getLibertasTier } from '@data/gladiatorMode/freedomSystem';
 
-interface MainLayoutProps {
+interface GladiatorLayoutProps {
   children: React.ReactNode;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+export const GladiatorLayout: React.FC<GladiatorLayoutProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const gameState = useAppSelector(state => state.game);
+  const gm = useAppSelector(state => state.gladiatorMode);
+
   const currentYear = gameState?.currentYear || 73;
   const currentMonth = gameState?.currentMonth || 1;
-  const currentScreen = gameState?.currentScreen || 'dashboard';
+  const currentScreen = gameState?.currentScreen || 'gladiatorDashboard';
   const currentPhase = gameState?.currentPhase || 'morning';
-  
+
   const monthName = getMonthName(currentMonth);
-  
-  const playerState = useAppSelector(state => state.player);
-  const fameState = useAppSelector(state => state.fame);
-  const gold = playerState?.gold || 0;
-  const ludusFame = fameState?.ludusFame || 0;
-  const ludusName = playerState?.ludusName || 'Ludus Magnus';
-  
+
+  const playerName = gm?.playerGladiator?.name || 'Gladiator';
+  const peculium = gm?.peculium || 0;
+  const libertas = gm?.freedom?.totalLibertas || 0;
+  const dominusFavor = gm?.dominus?.favor || 0;
+  const ludusName = gm?.dominus?.ludusName || 'Ludus';
+  const fame = gm?.playerGladiator?.fame || 0;
+  const libertasTier = getLibertasTier(libertas);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const navItems: { id: GameScreen; label: string; icon: string; shortLabel?: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: '🏛️', shortLabel: 'Home' },
-    { id: 'ludus', label: 'Ludus', icon: '🏗️' },
-    { id: 'gladiators', label: 'Gladiators', icon: '⚔️', shortLabel: 'Roster' },
-    { id: 'staff', label: 'Staff', icon: '👥' },
-    { id: 'marketplace', label: 'Market', icon: '🛒' },
-    { id: 'arena', label: 'Arena', icon: '🏟️' },
-    { id: 'fame', label: 'Fame', icon: '⭐' },
-    { id: 'politics', label: 'Politics', icon: '🏛️' },
-    { id: 'quests', label: 'Quests', icon: '📜' },
+    { id: 'gladiatorDashboard', label: 'Cell', icon: '🏠', shortLabel: 'Cell' },
+    { id: 'gladiatorTraining', label: 'Training', icon: '⚔️' },
+    { id: 'gladiatorLudusLife', label: 'Ludus Life', icon: '👥', shortLabel: 'Ludus' },
+    { id: 'gladiatorArena', label: 'Arena', icon: '🏟️' },
+    { id: 'gladiatorFreedom', label: 'Freedom', icon: '🕊️' },
+    { id: 'gladiatorPeculium', label: 'Peculium', icon: '💰' },
     { id: 'codex', label: 'Codex', icon: '📖' },
   ];
 
@@ -71,12 +73,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <span className="text-2xl">{mobileMenuOpen ? '✕' : '☰'}</span>
           </button>
 
-          {/* Ludus Name */}
+          {/* Player Name & Ludus */}
           <div className="flex items-center gap-2 sm:gap-4">
             <h1 className="font-roman text-lg sm:text-2xl text-roman-gold-500 text-shadow-roman truncate max-w-[120px] sm:max-w-none">
-              {ludusName}
+              {playerName}
             </h1>
             <div className="hidden sm:flex items-center gap-2 text-roman-marble-400 text-sm">
+              <span className="text-roman-marble-600">|</span>
+              <span>{ludusName}</span>
+              <span className="text-roman-marble-600">|</span>
               <span>{getPhaseIcon()}</span>
               <span>{monthName}, {currentYear} AD</span>
             </div>
@@ -90,19 +95,27 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <span>{monthName.substring(0, 3)} {currentYear}</span>
             </div>
 
-            {/* Gold */}
-            <Tooltip content="Treasury">
+            {/* Peculium */}
+            <Tooltip content="Peculium (personal fund)">
               <div className="flex items-center gap-1 sm:gap-2">
-                <span className="text-base sm:text-xl">🪙</span>
-                <span className="font-roman text-roman-gold-400 text-sm sm:text-lg">{gold.toLocaleString()}</span>
+                <span className="text-base sm:text-xl">💰</span>
+                <span className="font-roman text-roman-gold-400 text-sm sm:text-lg">{peculium}</span>
+              </div>
+            </Tooltip>
+
+            {/* Libertas */}
+            <Tooltip content={`Libertas: ${libertasTier.name} (${libertas}/1000)`}>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-base sm:text-xl">🕊️</span>
+                <span className="font-roman text-roman-marble-300 text-sm sm:text-lg">{libertas}</span>
               </div>
             </Tooltip>
 
             {/* Fame */}
-            <Tooltip content="Ludus Fame">
-              <div className="flex items-center gap-1 sm:gap-2">
+            <Tooltip content="Arena Fame">
+              <div className="hidden sm:flex items-center gap-1 sm:gap-2">
                 <span className="text-base sm:text-xl">⭐</span>
-                <span className="font-roman text-roman-marble-300 text-sm sm:text-lg">{ludusFame}</span>
+                <span className="font-roman text-roman-marble-300 text-sm sm:text-lg">{fame}</span>
               </div>
             </Tooltip>
 
@@ -136,6 +149,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 transition={{ type: 'tween', duration: 0.2 }}
                 className="fixed left-0 top-0 h-full w-64 bg-roman-marble-900 border-r border-roman-marble-700 z-50 lg:hidden pt-16"
               >
+                {/* Dominus favor in mobile sidebar */}
+                <div className="px-4 py-3 border-b border-roman-marble-700">
+                  <div className="text-xs text-roman-marble-500 uppercase tracking-wide mb-1">Dominus Favor</div>
+                  <div className="h-2 bg-roman-marble-800 rounded overflow-hidden">
+                    <div
+                      className={clsx('h-full rounded', dominusFavor > 60 ? 'bg-roman-gold-500' : dominusFavor > 30 ? 'bg-yellow-600' : 'bg-red-600')}
+                      style={{ width: `${dominusFavor}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-roman-marble-400 mt-1">{dominusFavor}/100</div>
+                </div>
+
                 <ul className="space-y-1 p-2">
                   {navItems.map(item => (
                     <li key={item.id}>
@@ -172,6 +197,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           >
             {sidebarCollapsed ? '→' : '←'}
           </button>
+
+          {/* Dominus favor bar (expanded only) */}
+          {!sidebarCollapsed && (
+            <div className="px-4 py-2 mb-2">
+              <div className="text-[10px] text-roman-marble-500 uppercase tracking-wide mb-1">Dominus Favor</div>
+              <div className="h-1.5 bg-roman-marble-800 rounded overflow-hidden">
+                <div
+                  className={clsx('h-full rounded', dominusFavor > 60 ? 'bg-roman-gold-500' : dominusFavor > 30 ? 'bg-yellow-600' : 'bg-red-600')}
+                  style={{ width: `${dominusFavor}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           <ul className="space-y-1">
             {navItems.map(item => (
