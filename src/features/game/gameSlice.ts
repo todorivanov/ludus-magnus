@@ -46,6 +46,9 @@ interface ExtendedGameState {
   totalGoldEarned: number;
   totalGoldSpent: number;
   
+  // Financial health
+  consecutiveBrokeMonths: number;
+  
   // Prestige / New Game+
   prestigeLevel: number;
   hasCompletedGame: boolean;
@@ -82,6 +85,7 @@ const initialState: ExtendedGameState = {
   totalMonthsPlayed: 0,
   totalGoldEarned: 0,
   totalGoldSpent: 0,
+  consecutiveBrokeMonths: 0,
   prestigeLevel: 0,
   hasCompletedGame: false,
 };
@@ -219,6 +223,14 @@ const gameSlice = createSlice({
       state.settings = { ...state.settings, ...action.payload };
     },
     
+    // Financial health
+    recordBrokeMonth: (state) => {
+      state.consecutiveBrokeMonths = (state.consecutiveBrokeMonths ?? 0) + 1;
+    },
+    resetBrokeMonths: (state) => {
+      state.consecutiveBrokeMonths = 0;
+    },
+    
     // Prestige
     completeGame: (state) => {
       state.hasCompletedGame = true;
@@ -244,6 +256,7 @@ const gameSlice = createSlice({
       state.totalMonthsPlayed = 0;
       state.totalGoldEarned = 0;
       state.totalGoldSpent = 0;
+      state.consecutiveBrokeMonths = 0;
       state.prestigeLevel = prevCompleted ? prevPrestige + 1 : prevPrestige;
       state.hasCompletedGame = false;
     },
@@ -267,6 +280,7 @@ const gameSlice = createSlice({
       state.totalMonthsPlayed = 0;
       state.totalGoldEarned = 0;
       state.totalGoldSpent = 0;
+      state.consecutiveBrokeMonths = 0;
     },
     resetGame: () => initialState,
   },
@@ -301,6 +315,8 @@ export const {
   setMusicVolume,
   completeTutorial,
   updateSettings,
+  recordBrokeMonth,
+  resetBrokeMonths,
   completeGame,
   startNewGamePlus,
   startNewGame,

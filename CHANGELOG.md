@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.6.0] - 2026-03-04
 
-Major quality update with audio system, 6 critical bug fixes, comprehensive type cleanup, 5 missing features implemented, combat AI overhaul, new Statistics screen, and Prestige/New Game+ system.
+Major quality update with audio system, 6 critical bug fixes, comprehensive type cleanup, 5 missing features implemented, combat AI overhaul, new Statistics screen, Prestige/New Game+ system, bankruptcy/debt consequences, and economy overhaul.
 
 ### Added
 
@@ -70,6 +70,21 @@ Major quality update with audio system, 6 critical bug fixes, comprehensive type
 - **Seasonal Visual Themes**: Subtle gradient overlay in the app — green (Spring), amber (Summer), orange (Autumn), blue (Winter)
 - **Month Report Messages**: Season name and effects shown in monthly summary
 
+#### Bankruptcy & Debt System
+- **Bankruptcy Escalation**: Consecutive months of insolvency trigger escalating consequences:
+  - Month 1+: Gladiator morale drops (-5% per broke month, cumulative)
+  - Month 2+: Staff may quit (15-50% chance per month)
+  - Month 3+: Low-morale gladiators escape (10-40% chance per month)
+  - Month 4-5: Critical warning with countdown
+  - Month 6: **Game over** — ludus seized by Roman authorities
+- **Loan Default Consequences**: Missed loan payments now have real teeth:
+  - 3-5 missed: Creditors damage buildings (-40% condition, 30% chance)
+  - 6-9 missed: Creditors confiscate gladiators (cheapest first, 30% chance)
+  - 10+ missed: **Game over** — total default, declared *infamis*
+  - Escalating warnings at each tier
+- **Game Over Screen**: Full-screen overlay with reason text, "Title Screen" and "New Game" options
+- **Financial Recovery**: Broke month counter resets when finances stabilize
+
 #### Rebellion Consequences
 - **Active Rebellion System**: When unrest reaches critical levels, 30% monthly chance of consequences
 - **4 Consequence Types**: Gladiator escape (low-morale fighter removed), staff desertion, building damage (-25% condition), gold theft (10% of treasury)
@@ -104,6 +119,13 @@ Major quality update with audio system, 6 critical bug fixes, comprehensive type
 - **`GladiatorOrigin` reconciled**: Added `'slave'` to union type (was missing for gladiator mode)
 - **`MatchRules` extended**: Added `'first_blood'` to the union type (engine already supported it)
 
+#### Economy & Month Processing
+- **Gold dispatch race condition**: Income and expenses were dispatched at different points causing milestones/events to not be counted toward expense affordability. All gold changes now batched in a single dispatch at the end of month processing
+- **`spendGold` silent failure**: Previously refused to deduct anything if gold < amount. Now deducts what the player can afford and marks the transaction as partial
+- **Month report accuracy**: Net gold now reflects actual gold change (income minus what was actually spent), not theoretical full expense amount
+- **Modal scrolling**: All modals now have `max-h-[90vh]` with scrollable content — month reports with many events no longer overflow the screen
+- **Bankruptcy counter stuck at 0**: `consecutiveBrokeMonths` was `undefined` in saves created before this feature, causing `undefined + 1 = NaN`. Fixed with nullish coalescing in the reducer
+
 #### Gladiator Mode
 - **New arrival event**: Now actually generates and adds a companion to the roster (was only showing text). Welcoming newcomer grants +10 starting relationship
 - **Duplicate `generateDominus` removed**: Gladiator mode slice now uses the canonical version from `dominusAI.ts`
@@ -120,8 +142,9 @@ Major quality update with audio system, 6 critical bug fixes, comprehensive type
 - **New files**: `src/data/constants.ts` (game-wide named constants), `src/components/screens/StatisticsScreen.tsx`
 - **Audio middleware**: Added to Redux store middleware chain for automatic sound triggers
 - **GameSettings extended**: `sfxVolume` and `musicVolume` fields with `setSFXVolume` / `setMusicVolume` reducers
-- **GameState extended**: `prestigeLevel` and `hasCompletedGame` fields with `completeGame` / `startNewGamePlus` reducers
+- **GameState extended**: `prestigeLevel`, `hasCompletedGame`, and `consecutiveBrokeMonths` fields with associated reducers
 - **Placeholder audio assets**: 29 SFX + 6 music files in `public/audio/` (silent placeholders — replace with real assets)
+- **Game Over system**: `isGameOver` and `gameOverReason` now actively used, with full-screen overlay in `App.tsx`
 
 ---
 
@@ -843,7 +866,7 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.6.0 | 2026-03-04 | Audio system, 6 critical bug fixes, Statistics screen, Prestige/NG+, smart AI, seasons, rebellion |
+| 1.6.0 | 2026-03-04 | Audio, bug fixes, Statistics, Prestige/NG+, smart AI, seasons, rebellion, bankruptcy, economy overhaul |
 | 1.5.0 | 2026-03-02 | Gladiator mode, Dominus AI, companions, arena combat, freedom system |
 | 1.4.0 | 2026-02-27 | Aging, banking/loans, building maintenance, historical events, milestones |
 | 1.3.0 | 2026-02-13 | Monthly game cycle: Year/month tracking, Roman calendar, time system overhaul |

@@ -63,13 +63,13 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={clsx(
-              'relative w-full card-roman-gold',
+              'relative w-full card-roman-gold max-h-[90vh] flex flex-col',
               sizeStyles[size]
             )}
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-roman-gold-700">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-roman-gold-700 flex-shrink-0">
                 {title && (
                   <h2 className="font-roman text-xl text-roman-gold-400 text-shadow-roman">
                     {title}
@@ -87,7 +87,7 @@ export const Modal: React.FC<ModalProps> = ({
             )}
             
             {/* Content */}
-            <div className="text-roman-marble-200">
+            <div className="text-roman-marble-200 overflow-y-auto flex-1 min-h-0">
               {children}
             </div>
           </motion.div>

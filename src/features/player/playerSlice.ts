@@ -65,15 +65,16 @@ const playerSlice = createSlice({
     },
     spendGold: (state, action: PayloadAction<{ amount: number; description: string; category: string; day: number }>) => {
       const { amount, description, category, day } = action.payload;
-      if (state.gold >= amount) {
-        state.gold -= amount;
+      const actualSpend = Math.min(amount, state.gold);
+      if (actualSpend > 0) {
+        state.gold -= actualSpend;
         state.transactions.push({
           id: uuidv4(),
           day,
           type: 'expense',
           category,
-          amount,
-          description,
+          amount: actualSpend,
+          description: actualSpend < amount ? `${description} (partial: ${actualSpend}/${amount}g)` : description,
         });
       }
     },

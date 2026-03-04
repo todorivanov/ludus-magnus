@@ -28,10 +28,14 @@ import {
 } from '@components/screens';
 import { audioManager } from '@/audio/AudioManager';
 import { useScreenMusic } from '@/audio/useAudio';
-import { getSeason } from '@features/game/gameSlice';
+import { getSeason, setScreen } from '@features/game/gameSlice';
+import { useAppDispatch } from '@app/hooks';
 
 const App: React.FC = () => {
+  const dispatch = useAppDispatch();
   const currentScreen = useAppSelector(state => state.game?.currentScreen || 'title');
+  const isGameOver = useAppSelector(state => state.game?.isGameOver ?? false);
+  const gameOverReason = useAppSelector(state => state.game?.gameOverReason ?? '');
   const soundEnabled = useAppSelector(state => state.game?.settings?.soundEnabled ?? true);
   const musicEnabled = useAppSelector(state => state.game?.settings?.musicEnabled ?? true);
   const sfxVolume = useAppSelector(state => state.game?.settings?.sfxVolume ?? 0.7);
@@ -114,6 +118,11 @@ const App: React.FC = () => {
   };
   const isInGame = !['title', 'modeSelect', 'newGame', 'newGameGladiator'].includes(currentScreen);
 
+  const handleRestart = () => {
+    localStorage.removeItem('persist:ludus-magnus-reborn');
+    window.location.href = window.location.origin + window.location.pathname;
+  };
+
   return (
     <div className="min-h-screen bg-roman-marble-900 text-roman-marble-100 relative">
       {isInGame && (
@@ -122,6 +131,32 @@ const App: React.FC = () => {
       <div className="relative z-10">
         {renderScreen()}
       </div>
+
+      {isGameOver && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm">
+          <div className="max-w-lg mx-4 text-center">
+            <div className="text-6xl mb-6">💀</div>
+            <h1 className="font-roman text-4xl text-roman-crimson-400 mb-4">GAME OVER</h1>
+            <p className="text-roman-marble-300 mb-8 leading-relaxed">
+              {gameOverReason}
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => dispatch(setScreen('title'))}
+                className="px-6 py-3 bg-roman-marble-800 border border-roman-marble-600 rounded-lg text-roman-marble-200 hover:bg-roman-marble-700 transition-colors"
+              >
+                Title Screen
+              </button>
+              <button
+                onClick={handleRestart}
+                className="px-6 py-3 bg-roman-crimson-600 border border-roman-crimson-500 rounded-lg text-white hover:bg-roman-crimson-500 transition-colors"
+              >
+                New Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

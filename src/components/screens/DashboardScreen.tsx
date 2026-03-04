@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { 
@@ -7,6 +7,9 @@ import {
   setMonthReport,
   hideMonthReport,
   setUnrestLevel,
+  setGameOver,
+  recordBrokeMonth,
+  resetBrokeMonths,
   getMonthName,
   getSeason,
 } from '@features/game/gameSlice';
@@ -51,6 +54,9 @@ export const DashboardScreen: React.FC = () => {
   const lastMonthReport = gameState?.lastMonthReport || null;
   const unrestLevel = gameState?.unrestLevel || 0;
   const rebellionWarning = gameState?.rebellionWarning || false;
+  const consecutiveBrokeMonths = gameState?.consecutiveBrokeMonths || 0;
+  const brokeMonthsRef = useRef(consecutiveBrokeMonths);
+  brokeMonthsRef.current = consecutiveBrokeMonths;
   
   // For systems that still need a day number (backward compatibility)
   const currentDay = (currentYear - 73) * 12 + currentMonth;
@@ -147,46 +153,11 @@ export const DashboardScreen: React.FC = () => {
       income.push({ source: 'Sponsorships', amount: sponsorIncome });
     }
 
-    // Calculate total income
-    const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
-
-    // Calculate net gold change and check if we can afford expenses
-    // We need to consider: currentGold + income - expenses >= 0
-    const goldAfterIncome = gold + totalIncome;
-    const canAffordExpenses = goldAfterIncome >= totalExpenses;
-
-    // Apply gold changes
-    if (totalIncome > 0) {
-      dispatch(addGold({
-        amount: totalIncome,
-        description: 'Daily Income',
-        category: 'daily',
-        day: currentDay,
-      }));
-    }
-    if (totalExpenses > 0 && canAffordExpenses) {
-      dispatch(spendGold({
-        amount: totalExpenses,
-        description: 'Daily Expenses',
-        category: 'daily',
-        day: currentDay,
-      }));
-    } else if (!canAffordExpenses) {
-      // Still spend what we can (income + current gold)
-      const canSpend = Math.min(totalExpenses, goldAfterIncome);
-      if (canSpend > 0) {
-        dispatch(spendGold({
-          amount: canSpend,
-          description: 'Daily Expenses (Partial)',
-          category: 'daily',
-          day: currentDay,
-        }));
-      }
-      alerts.push({
-        severity: 'danger',
-        message: `Insufficient gold for daily expenses! Short ${totalExpenses - goldAfterIncome}g. Staff morale may suffer.`,
-      });
-    }
+    // NOTE: Gold dispatches are deferred to the end of the function.
+    // Income and expenses are tracked in arrays first, then applied in a single batch
+    // after all sources (milestones, events, maintenance, loans) have been collected.
+    // availableGold is used as a local estimate for affordability checks.
+    availableGold = gold - totalExpenses;
 
     // Calculate and consume resources for gladiators based on nutrition
     let totalGrainConsumed = 0;
@@ -317,12 +288,6 @@ export const DashboardScreen: React.FC = () => {
           
           // Add gold reward if any
           if (milestoneResult.goldReward) {
-            dispatch(addGold({
-              amount: milestoneResult.goldReward,
-              description: `Milestone: ${milestone.name}`,
-              category: 'Milestones',
-              day: (currentYear - 73) * 12 + currentMonth
-            }));
             income.push({ source: `Milestone: ${milestone.name}`, amount: milestoneResult.goldReward });
           }
           
@@ -415,7 +380,6 @@ export const DashboardScreen: React.FC = () => {
           // Gold theft
           const stolenAmount = Math.min(gold, Math.round(gold * 0.1));
           if (stolenAmount > 0) {
-            dispatch(spendGold({ amount: stolenAmount, description: 'Stolen during unrest', category: 'rebellion', day: currentDay }));
             expenses.push({ source: 'Rebellion: Gold Stolen', amount: stolenAmount });
             events.push(`💰 REBELLION: ${stolenAmount} gold was stolen during the unrest!`);
           }
@@ -496,15 +460,8 @@ export const DashboardScreen: React.FC = () => {
         let maintenancePaid = false;
         
         if (canAffordMaintenance && maintenanceCost > 0) {
-          // Deduct maintenance cost
-          dispatch(spendGold({
-            amount: maintenanceCost,
-            description: `Maintenance: ${building.type}`,
-            category: 'Maintenance',
-            day: currentDay,
-          }));
           expenses.push({ source: `Maintenance: ${building.type}`, amount: maintenanceCost });
-          availableGold -= maintenanceCost; // Update local gold tracker
+          availableGold -= maintenanceCost;
           maintenancePaid = true;
         }
         
@@ -563,7 +520,7 @@ export const DashboardScreen: React.FC = () => {
           break;
         case 'lanista':
           // Lanista (manager) gains XP based on gold transactions
-          xpGain += Math.min(10, Math.floor((totalIncome + totalExpenses) / 50));
+          xpGain += Math.min(10, Math.floor((income.reduce((s, i) => s + i.amount, 0) + expenses.reduce((s, e) => s + e.amount, 0)) / 50));
           break;
         case 'lorarius':
           // Lorarius (disciplinarian) gains XP for keeping order
@@ -595,20 +552,13 @@ export const DashboardScreen: React.FC = () => {
         const canAffordPayment = availableGold >= loan.monthlyPayment;
         
         if (canAffordPayment) {
-          // Make payment
-          dispatch(spendGold({
-            amount: loan.monthlyPayment,
-            description: `Loan Payment (${loan.type})`,
-            category: 'Loans',
-            day: (currentYear - 73) * 12 + currentMonth
-          }));
           dispatch(makePayment({ 
             loanId: loan.id, 
             currentMonth, 
             currentYear 
           }));
           expenses.push({ source: `Loan Payment (${loan.type})`, amount: loan.monthlyPayment });
-          availableGold -= loan.monthlyPayment; // Update local tracker
+          availableGold -= loan.monthlyPayment;
           
           // Check if loan is completed
           if (loan.monthsPaid + 1 >= loan.durationMonths) {
@@ -622,18 +572,46 @@ export const DashboardScreen: React.FC = () => {
             currentYear 
           }));
           
-          // Apply penalties
           const loanType = LOAN_TYPES[loan.type];
+          const totalMissed = (loan.missedPayments ?? 0) + 1;
+          
+          // Faction favor penalty every missed payment
           dispatch(adjustFavor({ 
             faction: 'optimates', 
             amount: -loanType.missedPaymentPenalty.factionFavorLoss 
           }));
+          events.push(`❌ MISSED LOAN PAYMENT (${loan.type})! ${totalMissed} total missed. -${loanType.missedPaymentPenalty.factionFavorLoss} Optimates favor`);
           
-          events.push(`❌ MISSED LOAN PAYMENT! -${loanType.missedPaymentPenalty.factionFavorLoss} Optimates favor`);
+          // Escalating consequences based on total missed payments
+          if (totalMissed >= 3 && totalMissed < 6) {
+            // Creditors seize a building
+            const seizable = buildings.filter(b => !b.isUnderConstruction);
+            if (seizable.length > 0 && Math.random() < 0.3) {
+              const seized = seizable[Math.floor(Math.random() * seizable.length)];
+              dispatch(updateBuilding({ id: seized.id, updates: { condition: Math.max(0, (seized.condition ?? 100) - 40) } }));
+              events.push(`🏛️ DEBT COLLECTORS damaged your ${seized.type}! -40% condition.`);
+              alerts.push({ severity: 'danger', message: `Creditors damaged your ${seized.type} as collateral!` });
+            }
+          }
           
-          // Severe consequences for multiple missed payments
-          if (loan.missedPayments + 1 >= 2) {
-            events.push(`🚨 WARNING: Multiple missed payments! Risk of severe consequences!`);
+          if (totalMissed >= 6 && totalMissed < 10) {
+            // Creditors confiscate gladiators
+            if (roster.length > 1 && Math.random() < 0.3) {
+              const cheapest = [...roster].sort((a, b) => (a.fame || 0) - (b.fame || 0))[0];
+              dispatch(removeGladiator(cheapest.id));
+              events.push(`⛓️ DEBT ENFORCEMENT: ${cheapest.name} was seized by creditors to cover your debts!`);
+              alerts.push({ severity: 'danger', message: `${cheapest.name} confiscated by creditors! (${totalMissed} missed payments)` });
+            }
+          }
+          
+          if (totalMissed >= 10) {
+            // Game over — total default
+            dispatch(setGameOver(`Catastrophic debt default. With ${totalMissed} missed loan payments, Roman creditors have petitioned the magistrate. Your ludus, property, and remaining gladiators have been seized. You have been declared infamis — disgraced and ruined.`));
+            alerts.push({ severity: 'danger', message: 'GAME OVER: Total loan default — your ludus has been seized!' });
+          } else if (totalMissed >= 6) {
+            alerts.push({ severity: 'danger', message: `⚠️ ${totalMissed}/10 missed payments! Creditors are seizing assets. Game over at 10!` });
+          } else if (totalMissed >= 3) {
+            alerts.push({ severity: 'warning', message: `${totalMissed} missed payments. Creditors are getting aggressive.` });
           }
         }
       });
@@ -652,10 +630,8 @@ export const DashboardScreen: React.FC = () => {
             case 'gold_change': {
               const amount = effect.value || 0;
               if (amount > 0) {
-                dispatch(addGold({ amount, description: event.name, category: 'event', day: currentDay }));
                 income.push({ source: `Event: ${event.name}`, amount });
               } else if (amount < 0) {
-                dispatch(spendGold({ amount: Math.abs(amount), description: event.name, category: 'event', day: currentDay }));
                 expenses.push({ source: `Event: ${event.name}`, amount: Math.abs(amount) });
               }
               break;
@@ -683,7 +659,6 @@ export const DashboardScreen: React.FC = () => {
               const taxRate = effect.value || 0.1;
               const taxAmount = Math.round(gold * taxRate);
               if (taxAmount > 0) {
-                dispatch(spendGold({ amount: taxAmount, description: `Imperial Tax (${Math.round(taxRate * 100)}%)`, category: 'tax', day: currentDay }));
                 expenses.push({ source: 'Imperial Tax', amount: taxAmount });
               }
               break;
@@ -750,16 +725,98 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Recalculate total expenses now that all expenses (wages, food, maintenance, loans) have been added
+    // Recalculate totals now that ALL sources have been collected
+    const finalTotalIncome = income.reduce((sum, i) => sum + i.amount, 0);
     const finalTotalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    
+    const goldAvailable = gold + finalTotalIncome;
+    const actualTotalSpent = Math.min(finalTotalExpenses, Math.max(0, goldAvailable));
+
+    // Check for shortfall
+    if (finalTotalExpenses > goldAvailable) {
+      const shortfall = finalTotalExpenses - goldAvailable;
+      if (!alerts.some(a => a.message.includes('Short'))) {
+        alerts.push({
+          severity: 'danger',
+          message: `Insufficient gold for monthly expenses! Short ${shortfall}g. Staff morale may suffer.`,
+        });
+      }
+    }
+
+    // Apply gold in a single batch: add income, then deduct expenses
+    if (finalTotalIncome > 0) {
+      dispatch(addGold({
+        amount: finalTotalIncome,
+        description: 'Monthly Income',
+        category: 'monthly',
+        day: currentDay,
+      }));
+    }
+    if (actualTotalSpent > 0) {
+      dispatch(spendGold({
+        amount: actualTotalSpent,
+        description: 'Monthly Expenses',
+        category: 'monthly',
+        day: currentDay,
+      }));
+    }
+
+    // Bankruptcy consequences — use ref to always read the latest value
+    const isBroke = finalTotalExpenses > goldAvailable;
+    if (isBroke) {
+      dispatch(recordBrokeMonth());
+      const brokeMonths = brokeMonthsRef.current + 1;
+
+      events.push(`😤 Gladiators are hungry and discontented! (${brokeMonths} month${brokeMonths > 1 ? 's' : ''} in debt)`);
+
+      // Morale drops for all gladiators when unfed/unpaid
+      roster.forEach(g => {
+        const moraleDrop = Math.min(0.15, brokeMonths * 0.05);
+        const newMorale = Math.max(0, (g.morale || 1) - moraleDrop);
+        dispatch(updateGladiator({ id: g.id, updates: { morale: newMorale } }));
+      });
+
+      if (brokeMonths >= 2 && employees.length > 0) {
+        const quitChance = Math.min(0.5, brokeMonths * 0.15);
+        if (Math.random() < quitChance) {
+          const quitter = employees[employees.length - 1];
+          events.push(`👤 ${quitter.role.charAt(0).toUpperCase() + quitter.role.slice(1)} quit! ${brokeMonths} months without pay.`);
+          alerts.push({ severity: 'danger', message: `Your ${quitter.role} left due to unpaid wages!` });
+        }
+      }
+
+      if (brokeMonths >= 3 && roster.length > 1) {
+        const escapeChance = Math.min(0.4, (brokeMonths - 2) * 0.15);
+        const lowMoraleGladiators = roster.filter(g => (g.morale || 1) < 0.4);
+        if (Math.random() < escapeChance && lowMoraleGladiators.length > 0) {
+          const escapee = lowMoraleGladiators[0];
+          dispatch(removeGladiator(escapee.id));
+          events.push(`🏃 ${escapee.name} escaped the ludus!`);
+          alerts.push({ severity: 'danger', message: `${escapee.name} escaped — starvation drives them to flee!` });
+        }
+      }
+
+      if (brokeMonths >= 6) {
+        dispatch(setGameOver('Your ludus has gone bankrupt. Unable to pay debts, feed gladiators, or maintain operations for 6 consecutive months, the Roman authorities have seized your property and disbanded your school.'));
+        alerts.push({ severity: 'danger', message: 'GAME OVER: Your ludus has been seized for unpaid debts!' });
+      } else if (brokeMonths >= 4) {
+        alerts.push({ severity: 'danger', message: `⚠️ CRITICAL: ${brokeMonths}/6 months of bankruptcy! Sell gladiators or take loans NOW!` });
+      } else if (brokeMonths >= 2) {
+        alerts.push({ severity: 'warning', message: `${brokeMonths}/6 months in debt. Staff and gladiators are suffering.` });
+      }
+    } else {
+      if (brokeMonthsRef.current > 0) {
+        dispatch(resetBrokeMonths());
+        events.push(`💰 Finances stabilized — no longer in debt.`);
+      }
+    }
+
     // Create month report for the month that just completed (BEFORE advancing)
     dispatch(setMonthReport({
       year: currentYear,
       month: currentMonth,
       income,
       expenses,
-      netGold: totalIncome - finalTotalExpenses,
+      netGold: finalTotalIncome - actualTotalSpent,
       events,
       alerts,
     }));
@@ -768,7 +825,7 @@ export const DashboardScreen: React.FC = () => {
     dispatch(advanceMonth());
     
     setProcessingMonth(false);
-  }, [dispatch, currentYear, currentMonth, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel]);
+  }, [dispatch, currentYear, currentMonth, totalDailyWages, foodCosts, ludusFame, gold, roster, employees, buildings, resources, activeQuests, ownedMerchandise, activeSponsorships, factionFavors, protectionLevel, consecutiveBrokeMonths]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
