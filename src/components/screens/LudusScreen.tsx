@@ -308,6 +308,32 @@ export const LudusScreen: React.FC = () => {
                   );
                 })}
               </div>
+              {(() => {
+                const damagedBuildings = buildings.filter(b => !b.isUnderConstruction && !b.isUpgrading && (b.condition ?? 100) < 75);
+                if (damagedBuildings.length === 0) return null;
+                const totalRepairCost = damagedBuildings.reduce((sum, b) => sum + calculateRepairCost(b, 75, 0), 0);
+                return (
+                  <div className="mt-3">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="w-full"
+                      disabled={gold < totalRepairCost}
+                      onClick={() => {
+                        damagedBuildings.forEach(b => {
+                          const cost = calculateRepairCost(b, 75, 0);
+                          if (cost > 0 && gold >= cost) {
+                            dispatch(spendGold({ amount: cost, description: `Repair: ${b.type}`, category: 'maintenance', day: currentDay }));
+                            dispatch(updateBuilding({ id: b.id, updates: { condition: 75 } }));
+                          }
+                        });
+                      }}
+                    >
+                      Repair All to 75% ({totalRepairCost}g)
+                    </Button>
+                  </div>
+                );
+              })()}
               <div className="mt-4 text-xs text-roman-marble-500">
                 Buildings degrade by 2% per month without maintenance. Degraded buildings lose effectiveness.
               </div>

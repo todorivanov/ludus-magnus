@@ -15,6 +15,7 @@ export { PoliticsScreen } from './PoliticsScreen';
 export { QuestsScreen } from './QuestsScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { CodexScreen } from './CodexScreen';
+export { StatisticsScreen } from './StatisticsScreen';
 
 // Gladiator mode screens
 export { NewGameGladiatorScreen } from './gladiatorMode/NewGameGladiatorScreen';

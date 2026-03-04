@@ -36,6 +36,8 @@ export const TitleScreen: React.FC = () => {
   // Check if there's actual save data (player has a name set)
   const playerName = useAppSelector(state => state.player?.name);
   const hasSaveData = Boolean(playerName && playerName.trim().length > 0);
+  const hasCompletedGame = useAppSelector(state => state.game?.hasCompletedGame ?? false);
+  const prestigeLevel = useAppSelector(state => state.game?.prestigeLevel ?? 0);
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
@@ -217,6 +219,22 @@ export const TitleScreen: React.FC = () => {
                     className="w-56 sm:w-64"
                   >
                     Continue
+                  </Button>
+                </motion.div>
+              )}
+
+              {hasCompletedGame && (
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    variant="gold"
+                    size="lg"
+                    onClick={() => dispatch(setScreen('modeSelect'))}
+                    className="w-56 sm:w-64"
+                  >
+                    New Game+ {prestigeLevel > 0 && `(Prestige ${prestigeLevel})`}
                   </Button>
                 </motion.div>
               )}

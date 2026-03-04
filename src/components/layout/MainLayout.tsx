@@ -39,6 +39,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'fame', label: 'Fame', icon: '⭐' },
     { id: 'politics', label: 'Politics', icon: '🏛️' },
     { id: 'quests', label: 'Quests', icon: '📜' },
+    { id: 'statistics', label: 'Statistics', icon: '📊' },
     { id: 'codex', label: 'Codex', icon: '📖' },
   ];
 

@@ -105,3 +105,17 @@ export function calculateRemainingBalance(
   const totalPaid = monthlyPayment * monthsPaid;
   return Math.max(0, totalRepayment - totalPaid);
 }
+
+/**
+ * Calculate early payoff amount (remaining balance with 10% interest discount)
+ */
+export function calculateEarlyPayoff(
+  monthlyPayment: number,
+  monthsPaid: number,
+  durationMonths: number
+): number {
+  const remainingPayments = durationMonths - monthsPaid;
+  const remainingBalance = monthlyPayment * remainingPayments;
+  const discount = Math.round(remainingBalance * 0.1);
+  return remainingBalance - discount;
+}

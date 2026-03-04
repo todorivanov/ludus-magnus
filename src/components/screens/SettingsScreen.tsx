@@ -7,7 +7,10 @@ import {
   toggleAutosave, 
   toggleSound, 
   toggleMusic,
+  setSFXVolume,
+  setMusicVolume,
 } from '@features/game/gameSlice';
+import { useAudio } from '@/audio/useAudio';
 import { Card, CardHeader, CardTitle, CardContent, Button, Modal, Divider } from '@components/ui';
 import type { Difficulty } from '@/types';
 import { clsx } from 'clsx';
@@ -24,8 +27,11 @@ export const SettingsScreen: React.FC = () => {
     autosave: true,
     soundEnabled: true,
     musicEnabled: true,
+    sfxVolume: 0.7,
+    musicVolume: 0.4,
     tutorialCompleted: false,
   };
+  const { playSFX } = useAudio();
   const currentScreen = gameState?.currentScreen || 'title';
   
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -202,6 +208,60 @@ export const SettingsScreen: React.FC = () => {
                     className="absolute top-1 w-6 h-6 bg-white rounded-full shadow"
                   />
                 </button>
+              </div>
+
+              <Divider variant="subtle" />
+
+              {/* SFX Volume */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-roman-marble-200">Sound Volume</div>
+                  <span className="text-sm text-roman-marble-400">{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-roman-marble-500 text-sm">🔈</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round((settings.sfxVolume ?? 0.7) * 100)}
+                    onChange={(e) => dispatch(setSFXVolume(Number(e.target.value) / 100))}
+                    disabled={!settings.soundEnabled}
+                    className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-roman-gold-500 bg-roman-marble-700 disabled:opacity-40"
+                  />
+                  <span className="text-roman-marble-500 text-sm">🔊</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => playSFX('click')}
+                    disabled={!settings.soundEnabled}
+                  >
+                    Test
+                  </Button>
+                </div>
+              </div>
+
+              <Divider variant="subtle" />
+
+              {/* Music Volume */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-roman-marble-200">Music Volume</div>
+                  <span className="text-sm text-roman-marble-400">{Math.round((settings.musicVolume ?? 0.4) * 100)}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-roman-marble-500 text-sm">🔈</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round((settings.musicVolume ?? 0.4) * 100)}
+                    onChange={(e) => dispatch(setMusicVolume(Number(e.target.value) / 100))}
+                    disabled={!settings.musicEnabled}
+                    className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-roman-gold-500 bg-roman-marble-700 disabled:opacity-40"
+                  />
+                  <span className="text-roman-marble-500 text-sm">🔊</span>
+                </div>
               </div>
             </CardContent>
           </Card>

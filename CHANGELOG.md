@@ -8,13 +8,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Event effect application system (market price changes, stat modifiers, etc.)
-- Advanced loan features (early payoff, refinancing)
-- Bulk maintenance payment options
-- Sound effects and music
+- Split monolithic screen components (DashboardScreen, GladiatorsScreen, GladiatorDashboardScreen)
+- Rename day-based identifiers to month across codebase
+- Extract shared CombatView component from both combat screens
+- Tutorial / onboarding system
+- Keyboard navigation and accessibility (ARIA labels)
+- Multiple save slots
+- Combat replay system
+- Cross-mode encounters (meet gladiators from other saves)
 - Additional gladiator classes
 - More story content
-- Expanded historical events
+
+---
+
+## [1.6.0] - 2026-03-04
+
+Major quality update with audio system, 6 critical bug fixes, comprehensive type cleanup, 5 missing features implemented, combat AI overhaul, new Statistics screen, and Prestige/New Game+ system.
+
+### Added
+
+#### Audio System
+- **Sound Effects**: 29 SFX for combat (attack, block, dodge, critical, special, victory, defeat), economy (gold gain/spend, purchase), notifications (success, error, warning), and more — powered by Howler.js
+- **Background Music**: 6 music tracks mapped to screens (title, dashboard, combat, arena, marketplace, gladiator cell) with automatic crossfading on navigation
+- **Audio Controls**: Volume sliders (0-100%) for SFX and music in Settings, "Test Sound" button, toggle on/off per channel
+- **Redux Middleware**: Automatic SFX triggers on 13+ Redux actions (gold changes, quest completion, level up, construction, freedom, etc.)
+- **Toast Sounds**: Toasts now play type-specific sounds (notification, error, warning, goldGain)
+
+#### Statistics Screen
+- **New Statistics Screen**: Accessible from sidebar navigation, showing lifetime stats across 4 categories
+- **Overview**: Months played, total fights, victories, win rate
+- **Economy**: Current gold, total earned, total spent, net profit
+- **Combat Record**: Total kills, gladiators lost, tournaments won/entered, most victorious gladiator
+- **Ludus**: Active gladiators, buildings, staff, ludus fame, highest level/fame
+
+#### Prestige / New Game+
+- **Game Completion Tracking**: `hasCompletedGame` and `prestigeLevel` persisted in game state
+- **New Game+ Button**: Appears on title screen after completing a game, shows current prestige level
+- **Prestige Bonus**: +250 gold per prestige level added to starting gold on New Game+
+
+#### Patronage Freedom Path (Gladiator Mode)
+- **5 Progressive Patron Events**: Distinguished Visitor (fame 50+) → Senator's Interest (fame 100+) → Patron's Request (fame 200+) → Champion of a Senator (fame 250+) → Patron's Promise (fame 300+)
+- **Patronage Favor**: New `patronageFavor` field (0-100) in event effects and handler, tracks patron relationship
+- **Passive Patronage Gain**: Victories with high crowd favor (60+) grant +1-3 patronage when a patron has been attracted
+- **Updated Freedom Screen**: Path of Patronage now shows patron favor progress (X/80) instead of vague "quest chain" requirement
+
+#### Companion Relationship Consequences (Gladiator Mode)
+- **Brotherhood Bonus**: Brother-level companions (relationship 60+) grant +2% morale per brother each month
+- **Enemy Sabotage**: Enemy-level companions (relationship -60) have 25% monthly chance to sabotage: extra fatigue, morale damage, or minor HP loss
+
+#### Advanced Loan Features
+- **Early Payoff**: Pay off any loan early with 10% discount on remaining balance — "Pay Off" button on each loan card
+- **Refinancing**: Extend loan term with lower interest rates on remaining balance — "Refinance" button (short→medium, medium→long)
+- **`calculateEarlyPayoff` helper**: Computes discounted payoff amount
+
+#### Bulk Building Maintenance
+- **Repair All Button**: One-click "Repair All to 75%" button in the Ludus maintenance section, calculates total cost across all damaged buildings
+
+#### Seasonal System
+- **Seasonal Food Modifiers**: Winter +25% food cost, Autumn -15% food cost (harvest discount)
+- **Seasonal Morale**: Spring grants +3% morale boost to all gladiators
+- **Seasonal Visual Themes**: Subtle gradient overlay in the app — green (Spring), amber (Summer), orange (Autumn), blue (Winter)
+- **Month Report Messages**: Season name and effects shown in monthly summary
+
+#### Rebellion Consequences
+- **Active Rebellion System**: When unrest reaches critical levels, 30% monthly chance of consequences
+- **4 Consequence Types**: Gladiator escape (low-morale fighter removed), staff desertion, building damage (-25% condition), gold theft (10% of treasury)
+
+#### Class-Aware Combat AI
+- **8 Unique AI Strategies**: Each gladiator class now fights with distinct tactics:
+  - Retiarius: Net Throw first to cripple, then attack netted targets, favors dodging
+  - Secutor: Aggressive rush, heavy attacks, ends fights quickly
+  - Murmillo/Samnite: Defensive tank, block-and-counter, shield bash to stun
+  - Thraex/Hoplomachus: Balanced, applies bleed with specials, defends while bleeding stacks
+  - Dimachaerus: Relentless attacks, taunts to enrage, then punishes
+  - Velitus: Kites with javelin to slow, dodges frequently
+
+#### Other Additions
+- **Month Processing Overlay**: Animated fullscreen loading spinner with description during month advance
+- **Enhanced Month Report**: Visual income vs expense comparison bars (animated), totals with icons, subtotals per section
+- **Game Constants File**: `src/data/constants.ts` with 40+ named constants for game balance values
+
+### Fixed
+
+#### Critical Bugs
+- **Tournament gold/fame not tracked**: Stage rewards and placement bonuses now properly accumulated and passed to `completeTournament` (was hardcoded to 0)
+- **Historical event effects never applied**: Events now apply their mechanical effects — gold changes, fame changes, faction favor, gladiator morale, tax payments (was only logging descriptions)
+- **`first_blood` rule mismatch**: Changed from "first to drop below 80% HP" to "first to take any damage" (matching the actual concept)
+- **Equipment not used in combat**: `CombatEngine` now accepts `equipmentBonuses` — stat boosts from equipped items apply to combat stats, equipment damage/defense bonuses affect calculations
+- **`Exhausted` status never applied**: Now triggers when stamina reaches 0 (3-turn duration) with -20% damage and -15% accuracy modifiers properly applied in combat
+- **Gladiator mode `matchType` mismatch**: Changed `'munera'` to `'localMunera'` across dominusAI, GladiatorArenaScreen, freedomSystem, and MatchType type to match canonical `MATCH_TYPES` keys
+
+#### Type System
+- **`CombatLogEntry` unified**: Replaced outdated shape in `types/index.ts` (attacker/result) with the engine's shape (actor/target/message/isCrit/missed/dodged/blocked/effects). `TournamentEngine` updated (10 log entries)
+- **`FactionType` corrected**: Changed from `senate | plebs | legate` to `optimates | populares | military | merchants`
+- **`GladiatorOrigin` reconciled**: Added `'slave'` to union type (was missing for gladiator mode)
+- **`MatchRules` extended**: Added `'first_blood'` to the union type (engine already supported it)
+
+#### Gladiator Mode
+- **New arrival event**: Now actually generates and adds a companion to the roster (was only showing text). Welcoming newcomer grants +10 starting relationship
+- **Duplicate `generateDominus` removed**: Gladiator mode slice now uses the canonical version from `dominusAI.ts`
+- **`(stats as any)` cast removed**: `updatePlayerStats` reducer now uses properly typed iteration
+
+### Changed
+- **Gladiator Mode Loop**: Rewrote `GladiatorModeLoop.processGladiatorMonth` to be comprehensive (obedience, orders, recovery, selling, events, story, freedom). Dashboard now delegates to the loop instead of 100+ lines of inline logic
+- **Food costs**: Now use named constant `MONTHLY_FOOD_COST_PER_GLADIATOR` from `src/data/constants.ts` with seasonal multipliers
+- **Month report layout**: Redesigned with proportional animated bars for income vs expenses, section totals, and improved typography
+
+### Technical
+- **New dependency**: `howler` (runtime) + `@types/howler` (dev) for audio playback
+- **New files**: `src/audio/` directory (AudioManager, sounds, useAudio hook, audioMiddleware, barrel index)
+- **New files**: `src/data/constants.ts` (game-wide named constants), `src/components/screens/StatisticsScreen.tsx`
+- **Audio middleware**: Added to Redux store middleware chain for automatic sound triggers
+- **GameSettings extended**: `sfxVolume` and `musicVolume` fields with `setSFXVolume` / `setMusicVolume` reducers
+- **GameState extended**: `prestigeLevel` and `hasCompletedGame` fields with `completeGame` / `startNewGamePlus` reducers
+- **Placeholder audio assets**: 29 SFX + 6 music files in `public/audio/` (silent placeholders — replace with real assets)
 
 ---
 
@@ -736,6 +843,9 @@ This is the first public release of **Ludus Magnus: Reborn**, a complete Roman g
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.6.0 | 2026-03-04 | Audio system, 6 critical bug fixes, Statistics screen, Prestige/NG+, smart AI, seasons, rebellion |
+| 1.5.0 | 2026-03-02 | Gladiator mode, Dominus AI, companions, arena combat, freedom system |
+| 1.4.0 | 2026-02-27 | Aging, banking/loans, building maintenance, historical events, milestones |
 | 1.3.0 | 2026-02-13 | Monthly game cycle: Year/month tracking, Roman calendar, time system overhaul |
 | 1.2.1 | 2026-02-13 | Unified gladiator management, layout optimization, bug fixes |
 | 1.2.0 | 2026-02-13 | Marketplace expansion: 35+ items, tournament system, 13 new buildings |

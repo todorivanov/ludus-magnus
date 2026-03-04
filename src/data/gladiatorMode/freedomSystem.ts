@@ -50,14 +50,13 @@ export function calculateFreedomPaths(
       id: 'patronage',
       name: 'Path of Patronage',
       latin: 'Via Patroni',
-      description: 'A powerful Roman takes notice and sponsors your freedom. Build faction favor and attract a patron.',
+      description: 'A powerful Roman takes notice and sponsors your freedom. Impress visitors, build a patron\'s favor through events and spectacular victories.',
       icon: '🏛️',
       requirements: [
         `Reach fame 300 (${gladiator.fame}/300)`,
-        `Attract a patron (fame + crowd favor)`,
-        `Complete patron quest chain`,
+        `Build patron favor to 80+ (${freedom.patronageFavor}/80)`,
       ],
-      progress: Math.min(100, (freedom.patronageFavor / 100) * 60 + (gladiator.fame / 300) * 40),
+      progress: Math.min(100, (freedom.patronageFavor / 80) * 60 + (gladiator.fame / 300) * 40),
       available: gladiator.fame >= 100,
     },
     {
@@ -92,7 +91,7 @@ export function calculateLibertasFromFight(
   let base = 0;
   switch (matchType) {
     case 'pitFight': base = 15; break;
-    case 'munera': base = 20; break;
+    case 'localMunera': base = 20; break;
     case 'championship': base = 30; break;
     default: base = 15;
   }

@@ -31,9 +31,12 @@ import {
   type ActionType,
 } from '@data/combat';
 import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
-import { CombatEngine, type CombatState, type CombatLogEntry } from '../../game/CombatEngine';
+import { CombatEngine, type CombatState, type CombatLogEntry, type EquipmentBonuses } from '../../game/CombatEngine';
 import { clsx } from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
+import { useAudio } from '@/audio/useAudio';
+import type { SoundEffect } from '@/audio/sounds';
+import { ALL_MARKET_ITEMS } from '@data/marketplace';
 
 export const CombatScreen: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -60,6 +63,28 @@ export const CombatScreen: React.FC = () => {
   
   const logRef = useRef<HTMLDivElement>(null);
 
+  const getEquipmentBonuses = (equippedItems?: string[]): EquipmentBonuses => {
+    if (!equippedItems || equippedItems.length === 0) return {};
+    const bonuses: EquipmentBonuses = {};
+    equippedItems.forEach(itemId => {
+      const item = ALL_MARKET_ITEMS[itemId];
+      if (!item?.effect) return;
+      if (item.effect.type === 'stat_boost' && item.effect.stat && item.effect.value) {
+        const stat = item.effect.stat as keyof EquipmentBonuses;
+        bonuses[stat] = ((bonuses[stat] as number) || 0) + item.effect.value;
+      }
+      if (item.effect.type === 'equipment') {
+        if (item.effect.quality === 'legendary') {
+          bonuses.damageBonus = (bonuses.damageBonus || 0) + 10;
+          bonuses.defenseBonus = (bonuses.defenseBonus || 0) + 15;
+        } else if (item.effect.quality === 'common' && item.effect.slot === 'weapon') {
+          bonuses.damageBonus = (bonuses.damageBonus || 0) + 5;
+        }
+      }
+    });
+    return bonuses;
+  };
+
   // Initialize combat engine
   useEffect(() => {
     if (combatState?.gladiator && combatState?.opponent && !engine) {
@@ -74,7 +99,8 @@ export const CombatScreen: React.FC = () => {
           maxHP: combatState.gladiator.maxHP,
           currentStamina: combatState.gladiator.currentStamina,
           maxStamina: combatState.gladiator.maxStamina,
-          morale: combatState.gladiator.morale * 100, // Convert from 0.1-1.5 to percentage
+          morale: combatState.gladiator.morale * 100,
+          equipmentBonuses: getEquipmentBonuses(combatState.gladiator.equippedItems),
         },
         combatState.opponent,
         combatState.matchType,
@@ -94,17 +120,36 @@ export const CombatScreen: React.FC = () => {
     }
   }, [combatLog]);
 
+  const { playSFX } = useAudio();
+
+  const getSoundForLogEntry = (entry: CombatLogEntry): SoundEffect | null => {
+    if (entry.dodged) return 'dodge';
+    if (entry.blocked) return 'block';
+    if (entry.missed) return 'miss';
+    if (entry.isCrit) return 'critical';
+    if (entry.action === 'heavy_attack' && entry.damage) return 'heavyAttack';
+    if (entry.action === 'special' && entry.damage) return 'special';
+    if (entry.action === 'taunt') return 'taunt';
+    if (entry.action === 'defend') return 'block';
+    if (entry.action === 'rest') return null;
+    if (entry.damage && entry.damage > 0) return 'attack';
+    return null;
+  };
+
   // Handle action selection
   const handleAction = async (action: ActionType) => {
     if (!engine || !gameState || isAnimating || gameState.phase === 'ended') return;
 
     setIsAnimating(true);
+    playSFX('click');
 
     // Execute the action
     const entries = engine.executePlayerAction(action);
     
-    // Animate log entries
+    // Animate log entries with sound effects
     for (const entry of entries) {
+      const sfx = getSoundForLogEntry(entry);
+      if (sfx) playSFX(sfx);
       setCombatLog(prev => [...prev, entry]);
       await new Promise(resolve => setTimeout(resolve, 800));
     }
@@ -116,6 +161,8 @@ export const CombatScreen: React.FC = () => {
     // Check for combat end
     if (newState.phase === 'ended') {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      const isVictory = newState.winner === newState.player.name;
+      playSFX(isVictory ? 'victory' : 'defeat');
       setShowResults(true);
     }
 

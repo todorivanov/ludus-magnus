@@ -2,35 +2,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { 
   Gladiator, GladiatorStats,
   GladiatorModeOrigin, GladiatorModeRegion, GladiatorModeState,
-  Dominus, DominusPersonality, DominusOrder,
+  Dominus, DominusOrder,
   Companion,
   FreedomProgress, FreedomPath,
   GladiatorMonthPhase, GladiatorModeEvent,
 } from '@/types';
-
-const generateDominus = (personality?: DominusPersonality): Dominus => {
-  const names = [
-    'Quintus Lentulus Batiatus', 'Gaius Petronius Arbiter', 'Marcus Crassus Frugi',
-    'Lucius Tullius Decula', 'Publius Varinius Glaber', 'Titus Calavius Sabinus',
-    'Gnaeus Cornelius Scipio', 'Sextus Pompeius Strabo', 'Aulus Gabinius Capito',
-    'Decimus Junius Brutus', 'Servius Sulpicius Galba', 'Appius Claudius Pulcher',
-  ];
-  const ludusNames = [
-    'Ludus Magnus', 'Ludus Gallicus', 'Ludus Dacicus', 'Ludus Matutinus',
-    'Ludus Maximus', 'Ludus Bestiarius', 'Ludus Julianus', 'Ludus Neronis',
-    'Ludus Capuanus', 'Ludus Pompeiianus', 'Ludus Flavianus', 'Ludus Traianus',
-  ];
-  const personalities: DominusPersonality[] = ['fair', 'harsh', 'cruel', 'indulgent', 'ambitious'];
-  
-  return {
-    name: names[Math.floor(Math.random() * names.length)],
-    personality: personality || personalities[Math.floor(Math.random() * personalities.length)],
-    ludusName: ludusNames[Math.floor(Math.random() * ludusNames.length)],
-    wealth: 500 + Math.floor(Math.random() * 1500),
-    favor: 40,
-    politicalConnections: 20 + Math.floor(Math.random() * 40),
-  };
-};
+import { generateDominus } from '@data/gladiatorMode/dominusAI';
 
 const initialFreedom: FreedomProgress = {
   totalLibertas: 0,
@@ -46,7 +23,7 @@ const initialState: GladiatorModeState = {
   origin: 'pow',
   region: 'thrace',
 
-  dominus: generateDominus('fair'),
+  dominus: generateDominus(),
   previousDomini: [],
   timesSold: 0,
 
@@ -133,9 +110,11 @@ const gladiatorModeSlice = createSlice({
     updatePlayerStats: (state, action: PayloadAction<Partial<GladiatorStats>>) => {
       if (!state.playerGladiator) return;
       const stats = state.playerGladiator.stats;
-      Object.entries(action.payload).forEach(([key, value]) => {
+      const statKeys: (keyof GladiatorStats)[] = ['strength', 'agility', 'dexterity', 'endurance', 'constitution'];
+      statKeys.forEach(key => {
+        const value = action.payload[key];
         if (value !== undefined) {
-          (stats as any)[key] = Math.max(1, Math.min(100, (stats as any)[key] + value));
+          stats[key] = Math.max(1, Math.min(100, stats[key] + value));
         }
       });
     },

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { 
   advanceMonth, 
@@ -16,7 +16,7 @@ import { calculateStaffBonuses } from '@data/staff';
 import { tickCooldowns as tickQuestCooldowns, incrementObjective, updateObjective } from '@features/quests/questsSlice';
 import { tickCooldowns as tickFactionCooldowns, setPendingSabotage } from '@features/factions/factionsSlice';
 import { checkSabotageRisk } from '@data/factions';
-import { updateSponsorships } from '@features/fame/fameSlice';
+import { updateSponsorships, addLudusFame } from '@features/fame/fameSlice';
 import { getQuestById } from '@data/quests';
 import { calculateMerchandiseIncome, MERCHANDISE_ITEMS } from '@data/fame';
 import { 
@@ -30,8 +30,9 @@ import {
 import { applyMonthlyDegradation, getConditionCategory } from '@/utils/buildingMaintenance';
 import { checkMilestones, awardMilestone } from '@/utils/milestoneSystem';
 import { getEventsForMonth } from '@/data/historicalEvents';
-import { LOAN_TYPES, calculateMonthlyPayment, calculateTotalRepayment } from '@/data/loans';
-import { takeLoan } from '@features/loans/loansSlice';
+import { LOAN_TYPES, calculateMonthlyPayment, calculateTotalRepayment, calculateEarlyPayoff } from '@/data/loans';
+import { MONTHLY_FOOD_COST_PER_GLADIATOR, SEASONAL_FOOD_MODIFIERS } from '@/data/constants';
+import { takeLoan, payOffLoan, refinanceLoan } from '@features/loans/loansSlice';
 import { updateGladiator, removeGladiator } from '@features/gladiators/gladiatorsSlice';
 import { addExperience as addStaffExperience } from '@features/staff/staffSlice';
 import { makePayment, missPayment } from '@features/loans/loansSlice';
@@ -93,8 +94,9 @@ export const DashboardScreen: React.FC = () => {
   const [selectedLoanType, setSelectedLoanType] = useState<'short' | 'medium' | 'long' | null>(null);
   const [loanAmount, setLoanAmount] = useState(0);
 
-  // Calculate monthly expenses
-  const foodCosts = roster.length * 60; // ~2g per day * 30 days
+  // Calculate monthly expenses with seasonal modifiers
+  const seasonalFoodModifier = SEASONAL_FOOD_MODIFIERS[currentSeason.name] ?? 1.0;
+  const foodCosts = Math.round(roster.length * MONTHLY_FOOD_COST_PER_GLADIATOR * seasonalFoodModifier);
 
   // Process end of month
   const handleEndMonth = useCallback(() => {
@@ -386,6 +388,39 @@ export const DashboardScreen: React.FC = () => {
         severity: 'danger',
         message: 'Gladiator unrest is dangerously high! Risk of rebellion!',
       });
+
+      // Rebellion consequences (30% chance when risk is active)
+      if (Math.random() < 0.3) {
+        const rebellionRoll = Math.random();
+
+        if (rebellionRoll < 0.3 && roster.length > 1) {
+          // Gladiator escapes
+          const escapeCandidate = roster.filter(g => (g.morale || 1) < 0.5)[0] || roster[roster.length - 1];
+          dispatch(removeGladiator(escapeCandidate.id));
+          events.push(`🏃 REBELLION: ${escapeCandidate.name} has escaped the ludus!`);
+          alerts.push({ severity: 'danger', message: `${escapeCandidate.name} escaped during the unrest!` });
+        } else if (rebellionRoll < 0.6 && employees.length > 0) {
+          // Staff desertion — pick the least essential role
+          const deserter = employees[employees.length - 1];
+          events.push(`👤 UNREST: A ${deserter.role} has quit due to dangerous conditions!`);
+          alerts.push({ severity: 'danger', message: `Your ${deserter.role} deserted due to unrest!` });
+        } else if (rebellionRoll < 0.85 && buildings.length > 0) {
+          // Building damage
+          const targetBuilding = buildings[Math.floor(Math.random() * buildings.length)];
+          const newCondition = Math.max(0, (targetBuilding.condition ?? 100) - 25);
+          dispatch(updateBuilding({ id: targetBuilding.id, updates: { condition: newCondition } }));
+          events.push(`🔥 REBELLION: Gladiators damaged the ${targetBuilding.type}! Condition dropped by 25%.`);
+          alerts.push({ severity: 'danger', message: `${targetBuilding.type} was damaged in the unrest!` });
+        } else {
+          // Gold theft
+          const stolenAmount = Math.min(gold, Math.round(gold * 0.1));
+          if (stolenAmount > 0) {
+            dispatch(spendGold({ amount: stolenAmount, description: 'Stolen during unrest', category: 'rebellion', day: currentDay }));
+            expenses.push({ source: 'Rebellion: Gold Stolen', amount: stolenAmount });
+            events.push(`💰 REBELLION: ${stolenAmount} gold was stolen during the unrest!`);
+          }
+        }
+      }
     } else if (unrest.level > 50) {
       alerts.push({
         severity: 'warning',
@@ -604,18 +639,82 @@ export const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Process historical events
+    // Process historical events and apply their effects
     const monthlyEvents = getEventsForMonth(currentYear, currentMonth);
     if (monthlyEvents.length > 0) {
       monthlyEvents.forEach(event => {
         events.push(`📅 ${event.name}: ${event.description}`);
         
-        // TODO: Apply event effects (will be implemented in integration phase)
-        // For now, just notify about the event
         event.effects.forEach(effect => {
           events.push(`  └─ ${effect.description}`);
+
+          switch (effect.type) {
+            case 'gold_change': {
+              const amount = effect.value || 0;
+              if (amount > 0) {
+                dispatch(addGold({ amount, description: event.name, category: 'event', day: currentDay }));
+                income.push({ source: `Event: ${event.name}`, amount });
+              } else if (amount < 0) {
+                dispatch(spendGold({ amount: Math.abs(amount), description: event.name, category: 'event', day: currentDay }));
+                expenses.push({ source: `Event: ${event.name}`, amount: Math.abs(amount) });
+              }
+              break;
+            }
+            case 'fame_change': {
+              const amount = effect.value || 0;
+              dispatch(addLudusFame({ amount, source: `event_${event.id}`, day: currentDay }));
+              break;
+            }
+            case 'faction_favor': {
+              if (effect.factionId && effect.value) {
+                dispatch(adjustFavor({ faction: effect.factionId as 'optimates' | 'populares' | 'military' | 'merchants', amount: effect.value }));
+              }
+              break;
+            }
+            case 'gladiator_morale': {
+              const moraleChange = effect.value || 0;
+              roster.forEach(g => {
+                const newMorale = Math.max(0, Math.min(1.5, (g.morale || 1) + moraleChange));
+                dispatch(updateGladiator({ id: g.id, updates: { morale: newMorale } }));
+              });
+              break;
+            }
+            case 'tax_payment': {
+              const taxRate = effect.value || 0.1;
+              const taxAmount = Math.round(gold * taxRate);
+              if (taxAmount > 0) {
+                dispatch(spendGold({ amount: taxAmount, description: `Imperial Tax (${Math.round(taxRate * 100)}%)`, category: 'tax', day: currentDay }));
+                expenses.push({ source: 'Imperial Tax', amount: taxAmount });
+              }
+              break;
+            }
+            case 'resource_change': {
+              // Resources are managed through the player slice
+              break;
+            }
+            case 'tournament_unlock':
+            case 'market_price_change':
+              // Market price changes would need an economy system update; logged for now
+              break;
+          }
         });
       });
+    }
+
+    // Apply seasonal effects
+    const season = getSeason(currentMonth);
+    if (season.name === 'Winter') {
+      events.push(`${season.icon} ${season.name} (${season.latin}): Food costs increased by 25%. Harsh conditions.`);
+    } else if (season.name === 'Autumn') {
+      events.push(`${season.icon} ${season.name} (${season.latin}): Harvest season — food costs reduced by 15%.`);
+    } else if (season.name === 'Spring') {
+      events.push(`${season.icon} ${season.name} (${season.latin}): New beginnings — gladiator morale boosted.`);
+      roster.forEach(g => {
+        const newMorale = Math.min(1.5, (g.morale || 1) + 0.03);
+        dispatch(updateGladiator({ id: g.id, updates: { morale: newMorale } }));
+      });
+    } else if (season.name === 'Summer') {
+      events.push(`${season.icon} ${season.name} (${season.latin}): Peak games season — crowds are larger.`);
     }
 
     // Calculate security rating (guards + buildings)
@@ -896,6 +995,38 @@ export const DashboardScreen: React.FC = () => {
                               ⚠️ {loan.missedPayments} missed payment(s)
                             </div>
                           )}
+                          {(() => {
+                            const payoff = calculateEarlyPayoff(loan.monthlyPayment, loan.monthsPaid, loan.durationMonths);
+                            const canAfford = gold >= payoff;
+                            return (
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1 text-xs"
+                                  disabled={!canAfford}
+                                  onClick={() => {
+                                    dispatch(spendGold({ amount: payoff, description: `Early payoff: ${loanType.name}`, category: 'loan', day: currentDay }));
+                                    dispatch(payOffLoan({ loanId: loan.id, payoffAmount: payoff, currentMonth, currentYear }));
+                                  }}
+                                >
+                                  Pay Off ({payoff}g)
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1 text-xs"
+                                  onClick={() => {
+                                    const newType = loan.type === 'short' ? 'medium' : 'long';
+                                    dispatch(refinanceLoan({ loanId: loan.id, newType, currentMonth, currentYear }));
+                                  }}
+                                  disabled={loan.type === 'long'}
+                                >
+                                  Refinance
+                                </Button>
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}
@@ -996,6 +1127,30 @@ export const DashboardScreen: React.FC = () => {
           </motion.div>
         )}
 
+        {/* Month Processing Overlay */}
+        <AnimatePresence>
+          {processingMonth && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-roman-marble-900/80 backdrop-blur-sm"
+            >
+              <div className="text-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  className="text-5xl mb-4"
+                >
+                  ⏳
+                </motion.div>
+                <div className="font-roman text-xl text-roman-gold-500 mb-2">Advancing Month...</div>
+                <div className="text-sm text-roman-marble-400">Processing income, expenses, training, events...</div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Month Report Modal */}
         <Modal
           isOpen={showMonthReport}
@@ -1030,11 +1185,64 @@ export const DashboardScreen: React.FC = () => {
                 </div>
               )}
 
-              {/* Financial Summary */}
+              {/* Financial Overview Bar */}
+              {(() => {
+                const totalIncome = lastMonthReport.income.reduce((s, i) => s + i.amount, 0);
+                const totalExpenses = lastMonthReport.expenses.reduce((s, i) => s + i.amount, 0);
+                const maxVal = Math.max(totalIncome, totalExpenses, 1);
+                return (
+                  <div className="bg-roman-marble-800 p-4 rounded-lg">
+                    <div className="grid grid-cols-3 gap-4 text-center mb-4">
+                      <div>
+                        <div className="text-xs text-roman-marble-500">Income</div>
+                        <div className="font-roman text-lg text-health-high">+{totalIncome}g</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-roman-marble-500">Expenses</div>
+                        <div className="font-roman text-lg text-roman-crimson-400">-{totalExpenses}g</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-roman-marble-500">Net</div>
+                        <div className={clsx('font-roman text-lg', lastMonthReport.netGold >= 0 ? 'text-roman-gold-400' : 'text-roman-crimson-400')}>
+                          {lastMonthReport.netGold >= 0 ? '+' : ''}{lastMonthReport.netGold}g
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-roman-marble-500 w-16">Income</span>
+                        <div className="flex-1 h-4 bg-roman-marble-700 rounded overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(totalIncome / maxVal) * 100}%` }}
+                            transition={{ duration: 0.5 }}
+                            className="h-full bg-health-high/60 rounded"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-roman-marble-500 w-16">Expenses</span>
+                        <div className="flex-1 h-4 bg-roman-marble-700 rounded overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(totalExpenses / maxVal) * 100}%` }}
+                            transition={{ duration: 0.5 }}
+                            className="h-full bg-roman-crimson-600/60 rounded"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Financial Details */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Income */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
-                  <h4 className="font-roman text-health-high mb-3">Income</h4>
+                  <h4 className="font-roman text-health-high mb-3 flex items-center gap-2">
+                    <span>📈</span> Income
+                  </h4>
                   {lastMonthReport.income.length === 0 ? (
                     <div className="text-roman-marble-500 text-sm">No income this month</div>
                   ) : (
@@ -1045,13 +1253,19 @@ export const DashboardScreen: React.FC = () => {
                           <span className="text-health-high">+{item.amount}g</span>
                         </div>
                       ))}
+                      <div className="border-t border-roman-marble-700 pt-2 flex justify-between text-sm font-bold">
+                        <span className="text-roman-marble-300">Total</span>
+                        <span className="text-health-high">+{lastMonthReport.income.reduce((s, i) => s + i.amount, 0)}g</span>
+                      </div>
                     </div>
                   )}
                 </div>
 
                 {/* Expenses */}
                 <div className="bg-roman-marble-800 p-4 rounded-lg">
-                  <h4 className="font-roman text-roman-crimson-400 mb-3">Expenses</h4>
+                  <h4 className="font-roman text-roman-crimson-400 mb-3 flex items-center gap-2">
+                    <span>📉</span> Expenses
+                  </h4>
                   {lastMonthReport.expenses.length === 0 ? (
                     <div className="text-roman-marble-500 text-sm">No expenses this month</div>
                   ) : (
@@ -1062,24 +1276,12 @@ export const DashboardScreen: React.FC = () => {
                           <span className="text-roman-crimson-400">-{item.amount}g</span>
                         </div>
                       ))}
+                      <div className="border-t border-roman-marble-700 pt-2 flex justify-between text-sm font-bold">
+                        <span className="text-roman-marble-300">Total</span>
+                        <span className="text-roman-crimson-400">-{lastMonthReport.expenses.reduce((s, i) => s + i.amount, 0)}g</span>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Net Gold */}
-              <div className={clsx(
-                'p-4 rounded-lg text-center',
-                lastMonthReport.netGold >= 0 
-                  ? 'bg-health-high/20 border border-health-high' 
-                  : 'bg-roman-crimson-600/20 border border-roman-crimson-600'
-              )}>
-                <div className="text-roman-marble-400 text-sm">Net Change</div>
-                <div className={clsx(
-                  'font-roman text-2xl',
-                  lastMonthReport.netGold >= 0 ? 'text-health-high' : 'text-roman-crimson-400'
-                )}>
-                  {lastMonthReport.netGold >= 0 ? '+' : ''}{lastMonthReport.netGold}g
                 </div>
               </div>
 

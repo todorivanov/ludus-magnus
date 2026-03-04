@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAppDispatch } from '@app/hooks';
+import { useAppDispatch, useAppSelector } from '@app/hooks';
 import { startNewGame, setScreen } from '@features/game/gameSlice';
 import { initializePlayer, resetPlayer } from '@features/player/playerSlice';
 import { resetGladiators } from '@features/gladiators/gladiatorsSlice';
@@ -16,14 +16,16 @@ import { clsx } from 'clsx';
 
 export const NewGameScreen: React.FC = () => {
   const dispatch = useAppDispatch();
+  const prestigeLevel = useAppSelector(state => state.game?.prestigeLevel ?? 0);
   const [playerName, setPlayerName] = useState('');
   const [ludusName, setLudusName] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
+  const prestigeBonus = prestigeLevel * 250;
   const difficulties: { id: Difficulty; label: string; description: string; gold: number }[] = [
-    { id: 'easy', label: 'Novice', description: 'For those new to the arena', gold: 1500 },
-    { id: 'normal', label: 'Gladiator', description: 'The true Roman experience', gold: 1250 },
-    { id: 'hard', label: 'Champion', description: 'Only the worthy survive', gold: 1000 },
+    { id: 'easy', label: 'Novice', description: 'For those new to the arena', gold: 1500 + prestigeBonus },
+    { id: 'normal', label: 'Gladiator', description: 'The true Roman experience', gold: 1250 + prestigeBonus },
+    { id: 'hard', label: 'Champion', description: 'Only the worthy survive', gold: 1000 + prestigeBonus },
   ];
 
   const handleStartGame = () => {
@@ -44,6 +46,7 @@ export const NewGameScreen: React.FC = () => {
       name: playerName.trim(),
       ludusName: ludusName.trim(),
       difficulty,
+      prestigeBonus,
     }));
     dispatch(startNewGame({ difficulty }));
   };

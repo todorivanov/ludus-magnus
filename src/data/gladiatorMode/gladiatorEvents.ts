@@ -1,16 +1,17 @@
-import type { GladiatorModeEvent, Gladiator, Companion, Dominus } from '@/types';
+import type { GladiatorModeEvent, Gladiator, Companion, Dominus, FreedomProgress } from '@/types';
 
 export function generateRandomEvent(
   gladiator: Gladiator,
   companions: Companion[],
   dominus: Dominus,
   totalMonths: number,
+  freedom?: FreedomProgress,
 ): GladiatorModeEvent | null {
   const roll = Math.random();
-  if (roll > 0.35) return null; // ~35% chance of an event each month
+  if (roll > 0.35) return null;
 
   const aliveCompanions = companions.filter(c => c.isAlive && !c.soldAway && !c.freed);
-  const events = buildEventPool(gladiator, aliveCompanions, dominus, totalMonths);
+  const events = buildEventPool(gladiator, aliveCompanions, dominus, totalMonths, freedom);
   
   if (events.length === 0) return null;
   return events[Math.floor(Math.random() * events.length)];
@@ -21,6 +22,7 @@ function buildEventPool(
   companions: Companion[],
   dominus: Dominus,
   totalMonths: number,
+  freedom?: FreedomProgress,
 ): GladiatorModeEvent[] {
   const events: GladiatorModeEvent[] = [];
 
@@ -104,26 +106,106 @@ function buildEventPool(
     ],
   });
 
-  // Visitor
+  // Visitor — entry point for patronage path
   if (gladiator.fame >= 50) {
-    events.push({
-      id: `evt_visitor_${Date.now()}`,
-      title: 'A Distinguished Visitor',
-      description: 'A wealthy Roman has come to inspect the gladiators. His eyes linger on you. He asks your dominus about your record.',
-      type: 'visitor',
-      choices: [
-        {
-          id: 'impress',
-          text: 'Stand tall and show your scars',
-          effects: { dominusFavor: 3, libertas: 5 },
-        },
-        {
-          id: 'humble',
-          text: 'Keep your eyes down',
-          effects: { dominusFavor: 1, obedience: 5 },
-        },
-      ],
-    });
+    const patronFavor = freedom?.patronageFavor || 0;
+    
+    if (patronFavor < 20) {
+      events.push({
+        id: `evt_visitor_${Date.now()}`,
+        title: 'A Distinguished Visitor',
+        description: 'A wealthy Roman has come to inspect the gladiators. His eyes linger on you. He asks your dominus about your record.',
+        type: 'visitor',
+        choices: [
+          {
+            id: 'impress',
+            text: 'Stand tall and show your scars proudly',
+            effects: { dominusFavor: 3, libertas: 5, patronageFavor: 15 },
+          },
+          {
+            id: 'humble',
+            text: 'Keep your eyes down',
+            effects: { dominusFavor: 1, obedience: 5 },
+          },
+        ],
+      });
+    } else if (patronFavor >= 20 && patronFavor < 45 && gladiator.fame >= 100) {
+      events.push({
+        id: `evt_patron_interest_${Date.now()}`,
+        title: "A Senator's Interest",
+        description: 'The senator who visited before has sent a messenger. He invites you to fight wearing his colors at the next games. This could be the beginning of something.',
+        type: 'visitor',
+        choices: [
+          {
+            id: 'accept',
+            text: 'Accept his patronage with gratitude',
+            effects: { patronageFavor: 20, libertas: 10, morale: 0.05 },
+          },
+          {
+            id: 'negotiate',
+            text: 'Ask what he offers in return',
+            effects: { patronageFavor: 10, peculium: 15 },
+          },
+          {
+            id: 'refuse',
+            text: 'Decline — you fight for yourself',
+            effects: { morale: 0.03 },
+          },
+        ],
+      });
+    } else if (patronFavor >= 45 && patronFavor < 70 && gladiator.fame >= 200) {
+      events.push({
+        id: `evt_patron_mission_${Date.now()}`,
+        title: "The Patron's Request",
+        description: 'Your patron sends word: a rival senator has entered a gladiator in the next games. He needs you to win decisively — his political reputation depends on it.',
+        type: 'visitor',
+        choices: [
+          {
+            id: 'pledge',
+            text: '"I will crush his champion"',
+            effects: { patronageFavor: 15, libertas: 10, morale: 0.05 },
+          },
+          {
+            id: 'careful',
+            text: '"I will do my best, dominus willing"',
+            effects: { patronageFavor: 10, dominusFavor: 2 },
+          },
+        ],
+      });
+    } else if (patronFavor >= 70 && patronFavor < 90 && gladiator.fame >= 250) {
+      events.push({
+        id: `evt_patron_champion_${Date.now()}`,
+        title: "Champion of a Senator",
+        description: 'Your patron attends the games personally. He presents you with a gift and speaks of you before the crowd. Word reaches your dominus — a powerful man takes interest in his property.',
+        type: 'visitor',
+        choices: [
+          {
+            id: 'loyal',
+            text: 'Dedicate your next victory to him',
+            effects: { patronageFavor: 15, libertas: 15, dominusFavor: -3 },
+          },
+          {
+            id: 'diplomatic',
+            text: 'Thank him publicly while praising your dominus',
+            effects: { patronageFavor: 10, dominusFavor: 3, libertas: 8 },
+          },
+        ],
+      });
+    } else if (patronFavor >= 90 && gladiator.fame >= 300) {
+      events.push({
+        id: `evt_patron_freedom_${Date.now()}`,
+        title: "The Patron's Promise",
+        description: 'Your patron summons you through a trusted slave. "I have spoken to your dominus. He is willing to negotiate your freedom — for the right price and the right moment. Continue to fight well, and soon the rudis will be yours."',
+        type: 'visitor',
+        choices: [
+          {
+            id: 'grateful',
+            text: '"I am forever in your debt"',
+            effects: { patronageFavor: 10, libertas: 25, morale: 0.1 },
+          },
+        ],
+      });
+    }
   }
 
   // Dream of freedom

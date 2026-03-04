@@ -10,6 +10,7 @@ import {
   REGISTER,
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
+import { audioMiddleware } from '@/audio/audioMiddleware';
 
 // Import slices
 import gameReducer from '@features/game/gameSlice';
@@ -64,7 +65,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }),
+    }).concat(audioMiddleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 

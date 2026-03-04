@@ -7,16 +7,16 @@ import {
   adjustDominusFavor, addLibertas, addPeculium, adjustPlayerMorale,
   healPlayer, setPlayerFatigue, addExperience, updatePlayerGladiator,
   adjustPlayerFame, setCompanions, setPendingEvent, resolveEvent,
-  recalculateManumissionPrice, completeStoryChapter,
+  recalculateManumissionPrice, completeStoryChapter, updateFreedom,
   soldToNewLudus, addCompanion, removeCompanion, adjustCompanionRelationship,
 } from '@features/gladiatorMode/gladiatorModeSlice';
 import { Button, Card, CardContent, Modal } from '@components/ui';
 import { GladiatorLayout } from '@components/layout/GladiatorLayout';
-import { generateMonthlyOrder, evaluateMonthPerformance, getDominusFoodQuality, shouldSellGladiator, generateDominus as generateNewDominus } from '@data/gladiatorMode/dominusAI';
+import { generateMonthlyOrder, getDominusFoodQuality } from '@data/gladiatorMode/dominusAI';
 import { generateInitialCompanions, generateCompanion } from '@data/gladiatorMode/companions';
-import { generateRandomEvent } from '@data/gladiatorMode/gladiatorEvents';
-import { calculateLibertasFromMonth, getLibertasTier, checkPathFulfilled } from '@data/gladiatorMode/freedomSystem';
-import { getCurrentChapter, checkChapterCompletion, STORY_CHAPTERS } from '@data/gladiatorMode/gladiatorEvents';
+import { getLibertasTier } from '@data/gladiatorMode/freedomSystem';
+import { STORY_CHAPTERS, getCurrentChapter } from '@data/gladiatorMode/gladiatorEvents';
+import { processGladiatorMonth } from '@/game/GladiatorModeLoop';
 import { clsx } from 'clsx';
 
 export const GladiatorDashboardScreen: React.FC = () => {
@@ -63,151 +63,78 @@ export const GladiatorDashboardScreen: React.FC = () => {
   const favorPercent = dominus.favor;
 
   const handleAdvanceMonth = () => {
-    const summary: string[] = [];
+    const result = processGladiatorMonth(gm, { currentYear: game.currentYear, currentMonth: game.currentMonth });
 
-    // Determine if the player obeyed their orders
-    const trained = gm.trainedThisMonth ?? false;
-    const fought = gm.foughtThisMonth ?? false;
-
-    let obeyed = true;
-    if (currentOrder) {
-      if (currentOrder.type === 'train' && !trained) obeyed = false;
-      if (currentOrder.type === 'fight' && !fought) obeyed = false;
-      // rest, spar_partner, punishment are passive — always count as obeyed
-    }
-
-    // Process current month's order effects
     if (currentOrder) {
       dispatch(setMonthPhase('aftermath'));
-
-      if (currentOrder.type === 'train' && trained) {
-        // Training XP already applied by the training screen; just note it
-        summary.push('You trained as ordered.');
-      } else if (currentOrder.type === 'train' && !trained) {
-        summary.push('You disobeyed orders and did not train. Your dominus is displeased.');
-      }
-
-      if (currentOrder.type === 'fight' && fought) {
-        summary.push('You fought in the arena as ordered.');
-      } else if (currentOrder.type === 'fight' && !fought) {
-        summary.push('You were ordered to fight but did not enter the arena. Your dominus is furious.');
-      }
-
-      if (currentOrder.type === 'rest') {
-        const heal = Math.floor(player.maxHP * 0.3);
-        dispatch(healPlayer(heal));
-        dispatch(setPlayerFatigue(Math.max(0, player.fatigue - 30)));
-        summary.push(`Rested and recovered ${heal} HP.`);
-      }
-
-      if (currentOrder.type === 'spar_partner') {
-        const xp = 10 + Math.floor(Math.random() * 10);
-        dispatch(addExperience(xp));
-        summary.push(`Gained ${xp} XP as a sparring partner.`);
-      }
-
-      if (currentOrder.type === 'punishment') {
-        dispatch(healPlayer(-15));
-        dispatch(adjustPlayerMorale(-0.1));
-        summary.push('Endured punishment. Lost HP and morale.');
-      }
-
-      const evaluation = evaluateMonthPerformance(dominus, currentOrder, obeyed, null, 0);
-      dispatch(adjustDominusFavor(evaluation.favorChange));
-      summary.push(evaluation.message);
     }
+
+    // Apply order effects
+    if (result.healAmount !== 0) dispatch(healPlayer(result.healAmount));
+    if (result.staminaRestore > 0) dispatch(updatePlayerGladiator({ currentStamina: result.staminaRestore }));
+    if (result.fatigueChange !== 0) dispatch(setPlayerFatigue(Math.max(0, player.fatigue + result.fatigueChange)));
+    if (result.moraleChange !== 0) dispatch(adjustPlayerMorale(result.moraleChange));
+    if (result.favorChange !== 0) dispatch(adjustDominusFavor(result.favorChange));
+    if (result.xpGained > 0) dispatch(addExperience(result.xpGained));
 
     // Passive libertas
-    const passiveLibertas = calculateLibertasFromMonth(player, dominus, gm.totalMonthsServed);
-    if (passiveLibertas > 0) {
-      dispatch(addLibertas({ amount: passiveLibertas, source: 'glory' }));
-      summary.push(`Earned ${passiveLibertas} Libertas from your reputation.`);
+    if (result.libertasGained > 0) {
+      dispatch(addLibertas({ amount: result.libertasGained, source: 'glory' }));
     }
 
-    // Natural recovery (HP, stamina, fatigue)
-    const naturalHeal = Math.floor(player.maxHP * 0.1);
-    dispatch(healPlayer(naturalHeal));
-    const staminaRestore = Math.min(player.maxStamina, player.currentStamina + Math.floor(player.maxStamina * 0.3));
-    dispatch(updatePlayerGladiator({ currentStamina: staminaRestore }));
-    dispatch(setPlayerFatigue(Math.max(0, player.fatigue - 10)));
+    // Passive fame
+    if (result.fameGain > 0) {
+      dispatch(adjustPlayerFame(result.fameGain));
+    }
 
-    // Food quality morale effect
-    const foodMoraleMap = { poor: -0.03, standard: 0, good: 0.02, excellent: 0.05 };
-    dispatch(adjustPlayerMorale(foodMoraleMap[foodQuality]));
-
-    // Recalculate manumission price
     dispatch(recalculateManumissionPrice());
 
-    // Check if being sold
-    const currentFavor = dominus.favor;
-    if (shouldSellGladiator(dominus, currentFavor, gm.monthsInCurrentLudus + 1)) {
-      const newDom = generateNewDominus([dominus.name, ...gm.previousDomini]);
-      dispatch(soldToNewLudus({ newDominus: newDom }));
-      const newCompanions = generateInitialCompanions(game.currentYear, game.currentMonth, 4 + Math.floor(Math.random() * 3));
-      dispatch(setCompanions(newCompanions));
-      summary.push(`You have been sold to ${newDom.name} of ${newDom.ludusName}!`);
-    } else {
-      if (companions.filter(c => c.isAlive && !c.soldAway && !c.freed).length < 4 && Math.random() < 0.2) {
-        const newComp = generateCompanion(game.currentYear, game.currentMonth);
-        dispatch(addCompanion(newComp));
-        summary.push(`A new gladiator, ${newComp.gladiator.name}, has arrived at the ludus.`);
-      }
+    // Selling
+    if (result.wasSold && result.newDominus) {
+      dispatch(soldToNewLudus({ newDominus: result.newDominus }));
+      dispatch(setCompanions(result.newCompanions));
+    } else if (result.newArrival) {
+      dispatch(addCompanion(result.newArrival));
     }
 
     // Random event
-    const aliveCompanions = companions.filter(c => c.isAlive && !c.soldAway && !c.freed);
-    const event = generateRandomEvent(player, aliveCompanions, dominus, gm.totalMonthsServed);
-    if (event) {
-      dispatch(setPendingEvent(event));
+    if (result.event) {
+      dispatch(setPendingEvent(result.event));
     }
 
-    // Check story chapter completion
-    const chapter = getCurrentChapter(gm.storyChapter);
-    if (chapter) {
-      const rootState = { gladiatorMode: gm, game };
-      if (checkChapterCompletion(chapter, rootState)) {
-        dispatch(completeStoryChapter(chapter.id));
-        dispatch(addLibertas({ amount: chapter.rewards.libertas, source: 'glory' }));
-        dispatch(adjustPlayerFame(chapter.rewards.fame));
-        if (chapter.rewards.peculium > 0) {
-          dispatch(addPeculium({
-            amount: chapter.rewards.peculium,
-            source: `Chapter ${chapter.id}: ${chapter.title}`,
-            year: game.currentYear,
-            month: game.currentMonth,
-          }));
-        }
-        if (chapter.rewards.morale > 0) {
-          dispatch(adjustPlayerMorale(chapter.rewards.morale));
-        }
-        setChapterComplete(chapter);
-        summary.push(`Completed Chapter ${chapter.id}: ${chapter.title}!`);
+    // Story chapter
+    if (result.completedChapter && result.chapterRewards) {
+      dispatch(completeStoryChapter(result.completedChapter.id));
+      dispatch(addLibertas({ amount: result.chapterRewards.libertas, source: 'glory' }));
+      dispatch(adjustPlayerFame(result.chapterRewards.fame));
+      if (result.chapterRewards.peculium > 0) {
+        dispatch(addPeculium({
+          amount: result.chapterRewards.peculium,
+          source: `Chapter ${result.completedChapter.id}: ${result.completedChapter.title}`,
+          year: game.currentYear,
+          month: game.currentMonth,
+        }));
       }
+      if (result.chapterRewards.morale > 0) {
+        dispatch(adjustPlayerMorale(result.chapterRewards.morale));
+      }
+      setChapterComplete(result.completedChapter);
     }
 
-    // Check if freedom path is fulfilled
-    if (freedom.chosenPath) {
-      const pathFulfilled = checkPathFulfilled(
-        freedom.chosenPath, player, freedom, dominus,
-        gm.totalMonthsServed, gm.peculium
-      );
-      if (pathFulfilled) {
-        dispatch(addLibertas({ amount: 1000 - freedom.totalLibertas, source: freedom.chosenPath }));
-        summary.push('Your path to freedom is complete! The rudis awaits!');
-        setShowFreedomModal(true);
-      }
+    // Freedom path fulfilled
+    if (result.freedomFulfilled) {
+      dispatch(addLibertas({ amount: result.freedomLibertas, source: freedom.chosenPath || 'glory' }));
+      setShowFreedomModal(true);
     }
 
     // Advance the month
     dispatch(advanceGladiatorMonth());
     dispatch(advanceMonth());
 
-    // Generate NEXT month's order and show it
-    const nextAliveCompanions = companions.filter(c => c.isAlive && !c.soldAway && !c.freed);
-    const nextOrder = generateMonthlyOrder(dominus, player, nextAliveCompanions, gm.monthsInCurrentLudus + 1, gm.totalMonthsServed + 1);
-    dispatch(setCurrentOrder(nextOrder));
+    // Set next month's order
+    dispatch(setCurrentOrder(result.nextOrder));
 
-    setMonthSummary(summary);
+    setMonthSummary(result.summary);
     setShowSummary(true);
   };
 
@@ -234,6 +161,9 @@ export const GladiatorDashboardScreen: React.FC = () => {
     }
     if (effects.dominusFavor) dispatch(adjustDominusFavor(effects.dominusFavor));
     if (effects.libertas) dispatch(addLibertas({ amount: effects.libertas, source: 'glory' }));
+    if (effects.patronageFavor) {
+      dispatch(updateFreedom({ patronageFavor: Math.min(100, (gm.freedom.patronageFavor || 0) + effects.patronageFavor) }));
+    }
     if (effects.companionRelationship) {
       dispatch(adjustCompanionRelationship({ id: effects.companionRelationship.companionId, amount: effects.companionRelationship.amount }));
     }
@@ -241,6 +171,14 @@ export const GladiatorDashboardScreen: React.FC = () => {
     // Handle event-type-specific side effects
     if (event.type === 'companion_sold' && event.targetCompanionId) {
       dispatch(removeCompanion(event.targetCompanionId));
+    }
+    if (event.type === 'new_arrival' && choiceId === 'welcome') {
+      const newComp = generateCompanion(game.currentYear, game.currentMonth, [1, 3]);
+      newComp.relationship = 10;
+      dispatch(addCompanion(newComp));
+    } else if (event.type === 'new_arrival' && choiceId === 'ignore') {
+      const newComp = generateCompanion(game.currentYear, game.currentMonth, [1, 3]);
+      dispatch(addCompanion(newComp));
     }
 
     dispatch(resolveEvent(choiceId));

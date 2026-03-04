@@ -5,7 +5,7 @@ import { setScreen } from '@features/game/gameSlice';
 import {
   recordWin, recordLoss, recordKill, addExperience,
   adjustPlayerFame, adjustDominusFavor, addLibertas, addPeculium,
-  adjustPlayerMorale, updatePlayerGladiator, markFoughtThisMonth,
+  adjustPlayerMorale, updatePlayerGladiator, markFoughtThisMonth, updateFreedom,
 } from '@features/gladiatorMode/gladiatorModeSlice';
 import { Card, CardContent, Button, ProgressBar } from '@components/ui';
 import { GladiatorLayout } from '@components/layout/GladiatorLayout';
@@ -21,6 +21,8 @@ import { GLADIATOR_CLASSES } from '@data/gladiatorClasses';
 import { calculateLibertasFromFight, getPeculiumTipFromFight } from '@data/gladiatorMode/freedomSystem';
 import type { Gladiator } from '@/types';
 import { clsx } from 'clsx';
+import { useAudio } from '@/audio/useAudio';
+import type { SoundEffect } from '@/audio/sounds';
 
 type ArenaPhase = 'preview' | 'fighting' | 'missio' | 'result';
 
@@ -56,7 +58,7 @@ export const GladiatorArenaScreen: React.FC = () => {
   const hasFightOrder = currentOrder?.type === 'fight' && !(gm.foughtThisMonth ?? false);
   const matchType = currentOrder?.matchType || 'pitFight';
   const matchLabels: Record<string, string> = {
-    pitFight: 'Pit Fight', munera: 'Local Munera', championship: 'Championship',
+    pitFight: 'Pit Fight', localMunera: 'Local Munera', championship: 'Championship',
   };
   const rules = matchType === 'championship' ? 'death' as const : 'submission' as const;
 
@@ -106,14 +108,33 @@ export const GladiatorArenaScreen: React.FC = () => {
     }
   };
 
+  const { playSFX } = useAudio();
+
+  const getSoundForLogEntry = (entry: CombatLogEntry): SoundEffect | null => {
+    if (entry.dodged) return 'dodge';
+    if (entry.blocked) return 'block';
+    if (entry.missed) return 'miss';
+    if (entry.isCrit) return 'critical';
+    if (entry.action === 'heavy_attack' && entry.damage) return 'heavyAttack';
+    if (entry.action === 'special' && entry.damage) return 'special';
+    if (entry.action === 'taunt') return 'taunt';
+    if (entry.action === 'defend') return 'block';
+    if (entry.action === 'rest') return null;
+    if (entry.damage && entry.damage > 0) return 'attack';
+    return null;
+  };
+
   const handlePlayerAction = async (action: ActionType) => {
     if (!combatEngine || !combatState || isAnimating || combatState.phase === 'ended') return;
 
     setIsAnimating(true);
+    playSFX('click');
 
     const entries = combatEngine.executePlayerAction(action);
 
     for (const entry of entries) {
+      const sfx = getSoundForLogEntry(entry);
+      if (sfx) playSFX(sfx);
       setCombatLog(prev => [...prev, entry]);
       await new Promise(resolve => setTimeout(resolve, 600));
     }
@@ -132,6 +153,8 @@ export const GladiatorArenaScreen: React.FC = () => {
 
     if (newState.phase === 'ended') {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      const won = newState.winner === player.name;
+      playSFX(won ? 'victory' : 'defeat');
       handleCombatEnd(newState);
     }
 
@@ -174,11 +197,16 @@ export const GladiatorArenaScreen: React.FC = () => {
     }
     const xp = 50 + (killedOpponent ? 25 : 0) + Math.floor(Math.random() * 20);
     dispatch(addExperience(xp));
-    const fameGain = matchType === 'championship' ? 25 : matchType === 'munera' ? 15 : 8;
+    const fameGain = matchType === 'championship' ? 25 : matchType === 'localMunera' ? 15 : 8;
     dispatch(adjustPlayerFame(fameGain + (crowdFavor > 70 ? 5 : 0)));
     dispatch(adjustDominusFavor(10 + (crowdFavor > 50 ? 5 : 0)));
     const libertas = calculateLibertasFromFight(true, matchType, crowdFavor, killedOpponent);
     dispatch(addLibertas({ amount: libertas, source: 'glory' }));
+    // Patronage favor grows passively from impressive victories
+    if (player.fame >= 100 && crowdFavor > 60 && (gm.freedom.patronageFavor || 0) > 0) {
+      const patronBonus = crowdFavor > 80 ? 3 : 1;
+      dispatch(updateFreedom({ patronageFavor: Math.min(100, (gm.freedom.patronageFavor || 0) + patronBonus) }));
+    }
     const tips = getPeculiumTipFromFight(true, crowdFavor, player.fame);
     if (tips > 0) {
       dispatch(addPeculium({ amount: tips, source: 'Arena victory tips', year: game.currentYear, month: game.currentMonth }));
@@ -546,7 +574,7 @@ export const GladiatorArenaScreen: React.FC = () => {
                       <div>
                         <div className="text-roman-marble-400 text-xs">Fame Earned</div>
                         <div className="font-roman text-lg text-roman-gold-400">
-                          +{matchType === 'championship' ? 25 : matchType === 'munera' ? 15 : 8}
+                          +{matchType === 'championship' ? 25 : matchType === 'localMunera' ? 15 : 8}
                         </div>
                       </div>
                       <div>

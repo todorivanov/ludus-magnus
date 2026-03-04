@@ -28,6 +28,7 @@ export type GameScreen =
   | 'quests'
   | 'settings'
   | 'codex'
+  | 'statistics'
   | 'gladiatorDashboard'
   | 'gladiatorTraining'
   | 'gladiatorLudusLife'
@@ -49,7 +50,7 @@ export type GladiatorClass =
   | 'samnite' 
   | 'velitus';
 
-export type GladiatorOrigin = 'pow' | 'criminal' | 'volunteer' | 'elite';
+export type GladiatorOrigin = 'pow' | 'criminal' | 'volunteer' | 'elite' | 'slave';
 
 export type InjurySeverity = 'minor' | 'major' | 'permanent';
 
@@ -229,8 +230,8 @@ export interface Staff {
 // COMBAT TYPES
 // ==========================================
 
-export type MatchType = 'pitFight' | 'munera' | 'championship';
-export type MatchRules = 'submission' | 'death';
+export type MatchType = 'pitFight' | 'localMunera' | 'championship';
+export type MatchRules = 'submission' | 'death' | 'first_blood';
 
 export interface CombatAction {
   type: 'attack' | 'defend' | 'special' | 'rest';
@@ -242,10 +243,16 @@ export interface CombatAction {
 
 export interface CombatLogEntry {
   turn: number;
-  attacker: string;
+  actor: string;
   action: string;
+  target?: string;
   damage?: number;
-  result: string;
+  isCrit?: boolean;
+  missed?: boolean;
+  dodged?: boolean;
+  blocked?: boolean;
+  effects?: string[];
+  message: string;
 }
 
 export interface CombatMatch {
@@ -363,7 +370,7 @@ export interface ActiveEffect {
 // FACTION TYPES
 // ==========================================
 
-export type FactionType = 'senate' | 'plebs' | 'legate';
+export type FactionType = 'optimates' | 'populares' | 'military' | 'merchants';
 
 export interface FactionStanding {
   faction: FactionType;
@@ -413,6 +420,8 @@ export interface GameSettings {
   autosave: boolean;
   soundEnabled: boolean;
   musicEnabled: boolean;
+  sfxVolume: number;
+  musicVolume: number;
   tutorialCompleted: boolean;
 }
 
@@ -607,6 +616,7 @@ export interface GladiatorModeEvent {
       dominusFavor?: number;
       obedience?: number;
       libertas?: number;
+      patronageFavor?: number;
       companionRelationship?: { companionId: string; amount: number };
     };
   }[];

@@ -62,12 +62,12 @@ export function generateMonthlyOrder(
   const roll = Math.random();
 
   if (roll < fightChance && !isNewbie) {
-    const matchTypes = ['pitFight', 'munera'];
+    const matchTypes = ['pitFight', 'localMunera'];
     if (player.fame >= 100) matchTypes.push('championship');
     const matchType = matchTypes[Math.floor(Math.random() * matchTypes.length)];
     const matchLabels: Record<string, string> = {
       pitFight: 'a pit fight',
-      munera: 'the local munera',
+      localMunera: 'the local munera',
       championship: 'the championship',
     };
 

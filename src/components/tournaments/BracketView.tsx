@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '@app/hooks';
 import { setScreen } from '@features/game/gameSlice';
@@ -39,6 +39,9 @@ export const BracketView: React.FC = () => {
     winner: TournamentParticipant;
     loser: TournamentParticipant;
   } | null>(null);
+
+  const accumulatedGoldRef = useRef(0);
+  const accumulatedFameRef = useRef(0);
 
   // Check if tournament is complete
   useEffect(() => {
@@ -272,6 +275,9 @@ export const BracketView: React.FC = () => {
         day: currentDay,
       }));
 
+      accumulatedGoldRef.current += rewards.gold;
+      accumulatedFameRef.current += rewards.fame;
+
       addToast({
         type: 'gold',
         title: `Earned ${rewards.gold} gold and ${rewards.fame} fame!`,
@@ -315,6 +321,9 @@ export const BracketView: React.FC = () => {
           day: currentDay,
         }));
 
+        accumulatedGoldRef.current += winnerBonus.gold;
+        accumulatedFameRef.current += winnerBonus.fame;
+
         addToast({
           type: 'gold',
           title: `${winner.name} is the Tournament Champion!`,
@@ -343,6 +352,9 @@ export const BracketView: React.FC = () => {
           source: 'tournament',
           day: currentDay,
         }));
+
+        accumulatedGoldRef.current += runnerUpBonus.gold;
+        accumulatedFameRef.current += runnerUpBonus.fame;
       }
 
       // Calculate player results
@@ -360,9 +372,12 @@ export const BracketView: React.FC = () => {
       dispatch(completeTournament({
         completionDay: currentDay,
         playerResults,
-        totalGoldEarned: 0, // TODO: Track this properly
-        totalFameEarned: 0, // TODO: Track this properly
+        totalGoldEarned: accumulatedGoldRef.current,
+        totalFameEarned: accumulatedFameRef.current,
       }));
+
+      accumulatedGoldRef.current = 0;
+      accumulatedFameRef.current = 0;
 
       // Return to arena screen
       setTimeout(() => {

@@ -41,10 +41,10 @@ const playerSlice = createSlice({
     setLudusName: (state, action: PayloadAction<string>) => {
       state.ludusName = action.payload;
     },
-    initializePlayer: (state, action: PayloadAction<{ name: string; ludusName: string; difficulty: Difficulty }>) => {
+    initializePlayer: (state, action: PayloadAction<{ name: string; ludusName: string; difficulty: Difficulty; prestigeBonus?: number }>) => {
       state.name = action.payload.name;
       state.ludusName = action.payload.ludusName;
-      state.gold = getStartingGold(action.payload.difficulty);
+      state.gold = getStartingGold(action.payload.difficulty) + (action.payload.prestigeBonus || 0);
       state.ludusFame = 0;
       state.resources = { ...initialResources };
       state.transactions = [];

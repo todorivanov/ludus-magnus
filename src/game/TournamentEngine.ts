@@ -172,9 +172,9 @@ export class TournamentEngine {
         winner = combatant1;
         combatLog.push({
           turn,
-          attacker: combatant2.name,
+          actor: combatant2.name,
           action: 'submit',
-          result: `${combatant2.name} submits!`,
+          message: `${combatant2.name} submits!`,
         });
         break;
       }
@@ -194,9 +194,9 @@ export class TournamentEngine {
         winner = combatant2;
         combatLog.push({
           turn,
-          attacker: combatant1.name,
+          actor: combatant1.name,
           action: 'submit',
-          result: `${combatant1.name} submits!`,
+          message: `${combatant1.name} submits!`,
         });
         break;
       }
@@ -219,9 +219,9 @@ export class TournamentEngine {
       winner = hp1Percent >= hp2Percent ? combatant1 : combatant2;
       combatLog.push({
         turn,
-        attacker: 'Referee',
+        actor: 'Referee',
         action: 'judge',
-        result: `Time limit reached. ${winner.name} wins by decision!`,
+        message: `Time limit reached. ${winner.name} wins by decision!`,
       });
     }
     
@@ -300,9 +300,9 @@ export class TournamentEngine {
       attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
       log.push({
         turn,
-        attacker: attacker.name,
+        actor: attacker.name,
         action: 'rest',
-        result: `${attacker.name} rests and recovers ${recovery} stamina`,
+        message: `${attacker.name} rests and recovers ${recovery} stamina`,
       });
       return;
     }
@@ -311,9 +311,9 @@ export class TournamentEngine {
       this.applyStatusEffect(attacker, 'defended', 1);
       log.push({
         turn,
-        attacker: attacker.name,
+        actor: attacker.name,
         action: 'defend',
-        result: `${attacker.name} raises their guard`,
+        message: `${attacker.name} raises their guard`,
       });
       return;
     }
@@ -321,9 +321,9 @@ export class TournamentEngine {
     if (action === 'dodge') {
       log.push({
         turn,
-        attacker: attacker.name,
+        actor: attacker.name,
         action: 'dodge',
-        result: `${attacker.name} prepares to evade`,
+        message: `${attacker.name} prepares to evade`,
       });
       return;
     }
@@ -341,10 +341,12 @@ export class TournamentEngine {
       if (Math.random() * 100 > hitChance) {
         log.push({
           turn,
-          attacker: attacker.name,
+          actor: attacker.name,
           action,
+          target: defender.name,
           damage: 0,
-          result: `${attacker.name} attacks but misses!`,
+          missed: true,
+          message: `${attacker.name} attacks but misses!`,
         });
         return;
       }
@@ -354,10 +356,12 @@ export class TournamentEngine {
       if (Math.random() * 100 < dodgeChance) {
         log.push({
           turn,
-          attacker: attacker.name,
+          actor: attacker.name,
           action,
+          target: defender.name,
           damage: 0,
-          result: `${defender.name} dodges ${attacker.name}'s attack!`,
+          dodged: true,
+          message: `${defender.name} dodges ${attacker.name}'s attack!`,
         });
         return;
       }
@@ -383,10 +387,13 @@ export class TournamentEngine {
       
       log.push({
         turn,
-        attacker: attacker.name,
+        actor: attacker.name,
         action,
+        target: defender.name,
         damage,
-        result: `${attacker.name} ${action === 'heavy_attack' ? 'strikes heavily' : 'attacks'} ${defender.name} for ${damage} damage${isCrit ? ' (Critical!)' : ''}`,
+        isCrit,
+        blocked: this.hasStatusEffect(defender, 'defended'),
+        message: `${attacker.name} ${action === 'heavy_attack' ? 'strikes heavily' : 'attacks'} ${defender.name} for ${damage} damage${isCrit ? ' (Critical!)' : ''}`,
       });
       
       // Apply status effects from action
@@ -439,10 +446,10 @@ export class TournamentEngine {
         combatant.currentHP = Math.max(0, combatant.currentHP - damage);
         log.push({
           turn,
-          attacker: combatant.name,
+          actor: combatant.name,
           action: 'bleed',
           damage,
-          result: `${combatant.name} takes ${damage} bleeding damage`,
+          message: `${combatant.name} takes ${damage} bleeding damage`,
         });
       }
       

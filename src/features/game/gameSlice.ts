@@ -46,6 +46,10 @@ interface ExtendedGameState {
   totalGoldEarned: number;
   totalGoldSpent: number;
   
+  // Prestige / New Game+
+  prestigeLevel: number;
+  hasCompletedGame: boolean;
+  
   // Legacy support (for migration)
   currentDay?: number; // Deprecated, kept for save compatibility
 }
@@ -55,6 +59,8 @@ const initialSettings: GameSettings = {
   autosave: true,
   soundEnabled: true,
   musicEnabled: true,
+  sfxVolume: 0.7,
+  musicVolume: 0.4,
   tutorialCompleted: false,
 };
 
@@ -76,6 +82,8 @@ const initialState: ExtendedGameState = {
   totalMonthsPlayed: 0,
   totalGoldEarned: 0,
   totalGoldSpent: 0,
+  prestigeLevel: 0,
+  hasCompletedGame: false,
 };
 
 const gameSlice = createSlice({
@@ -198,11 +206,46 @@ const gameSlice = createSlice({
     toggleMusic: (state) => {
       state.settings.musicEnabled = !state.settings.musicEnabled;
     },
+    setSFXVolume: (state, action: PayloadAction<number>) => {
+      state.settings.sfxVolume = Math.max(0, Math.min(1, action.payload));
+    },
+    setMusicVolume: (state, action: PayloadAction<number>) => {
+      state.settings.musicVolume = Math.max(0, Math.min(1, action.payload));
+    },
     completeTutorial: (state) => {
       state.settings.tutorialCompleted = true;
     },
     updateSettings: (state, action: PayloadAction<Partial<GameSettings>>) => {
       state.settings = { ...state.settings, ...action.payload };
+    },
+    
+    // Prestige
+    completeGame: (state) => {
+      state.hasCompletedGame = true;
+    },
+    startNewGamePlus: (state, action: PayloadAction<{ difficulty: Difficulty; gameMode?: GameMode }>) => {
+      const prevPrestige = state.prestigeLevel;
+      const prevCompleted = state.hasCompletedGame;
+      
+      state.gameMode = action.payload.gameMode || 'lanista';
+      state.currentYear = 73;
+      state.currentMonth = 1;
+      state.currentPhase = 'morning';
+      state.currentScreen = state.gameMode === 'gladiator' ? 'gladiatorDashboard' : 'dashboard';
+      state.isPaused = false;
+      state.isGameOver = false;
+      state.gameOverReason = undefined;
+      state.settings.difficulty = action.payload.difficulty;
+      state.lastMonthReport = null;
+      state.showMonthReport = false;
+      state.monthProcessing = false;
+      state.unrestLevel = 0;
+      state.rebellionWarning = false;
+      state.totalMonthsPlayed = 0;
+      state.totalGoldEarned = 0;
+      state.totalGoldSpent = 0;
+      state.prestigeLevel = prevCompleted ? prevPrestige + 1 : prevPrestige;
+      state.hasCompletedGame = false;
     },
     
     // New game / Reset
@@ -254,8 +297,12 @@ export const {
   toggleAutosave,
   toggleSound,
   toggleMusic,
+  setSFXVolume,
+  setMusicVolume,
   completeTutorial,
   updateSettings,
+  completeGame,
+  startNewGamePlus,
   startNewGame,
   resetGame,
 } = gameSlice.actions;

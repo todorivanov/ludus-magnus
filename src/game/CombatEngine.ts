@@ -1,4 +1,4 @@
-import type { GladiatorClass } from '@/types';
+import type { GladiatorClass, CombatLogEntry } from '@/types';
 import { 
   COMBAT_ACTIONS, 
   STATUS_EFFECTS, 
@@ -10,6 +10,16 @@ import {
   type ActionType,
   type StatusEffect,
 } from '@data/combat';
+
+export interface EquipmentBonuses {
+  strength?: number;
+  agility?: number;
+  dexterity?: number;
+  endurance?: number;
+  constitution?: number;
+  damageBonus?: number;
+  defenseBonus?: number;
+}
 
 export interface CombatantState {
   id: string;
@@ -41,21 +51,12 @@ export interface CombatantState {
   
   // Combat stats
   morale: number; // 0-100, affects damage and accuracy
+  
+  // Equipment bonuses applied during combat
+  equipmentBonuses: EquipmentBonuses;
 }
 
-export interface CombatLogEntry {
-  turn: number;
-  actor: string;
-  action: string;
-  target?: string;
-  damage?: number;
-  isCrit?: boolean;
-  missed?: boolean;
-  dodged?: boolean;
-  blocked?: boolean;
-  effects?: string[];
-  message: string;
-}
+export type { CombatLogEntry };
 
 export interface CombatState {
   turn: number;
@@ -90,6 +91,7 @@ export class CombatEngine {
       currentStamina: number;
       maxStamina: number;
       morale: number;
+      equipmentBonuses?: EquipmentBonuses;
     },
     opponentData: {
       name: string;
@@ -103,6 +105,7 @@ export class CombatEngine {
     rules: 'submission' | 'death' | 'first_blood',
     maxRounds: number
   ) {
+    const eqBonus = playerData.equipmentBonuses || {};
     this.state = {
       turn: 1,
       phase: 'selection',
@@ -113,7 +116,13 @@ export class CombatEngine {
         name: playerData.name,
         class: playerData.class,
         isPlayer: true,
-        stats: playerData.stats,
+        stats: {
+          strength: playerData.stats.strength + (eqBonus.strength || 0),
+          agility: playerData.stats.agility + (eqBonus.agility || 0),
+          dexterity: playerData.stats.dexterity + (eqBonus.dexterity || 0),
+          endurance: playerData.stats.endurance + (eqBonus.endurance || 0),
+          constitution: playerData.stats.constitution + (eqBonus.constitution || 0),
+        },
         level: playerData.level,
         currentHP: playerData.currentHP,
         maxHP: playerData.maxHP,
@@ -122,6 +131,7 @@ export class CombatEngine {
         statusEffects: [],
         cooldowns: {},
         morale: playerData.morale,
+        equipmentBonuses: eqBonus,
       },
       
       opponent: {
@@ -138,6 +148,7 @@ export class CombatEngine {
         statusEffects: [],
         cooldowns: {},
         morale: 70,
+        equipmentBonuses: {},
       },
       
       currentActor: 'player',
@@ -248,6 +259,11 @@ export class CombatEngine {
       Math.max(0, actor.currentStamina - actionData.staminaCost)
     );
     
+    // Apply Exhausted status when stamina reaches 0
+    if (actor.currentStamina <= 0 && !this.hasStatusEffect(actor, 'exhausted')) {
+      this.applyStatusEffect(actor, 'exhausted', 3);
+    }
+    
     // Set cooldown if applicable
     if (actionData.cooldown) {
       actor.cooldowns[action] = actionData.cooldown;
@@ -301,9 +317,12 @@ export class CombatEngine {
       actionData.accuracyModifier
     );
     
-    // Apply status effect modifiers
+    // Apply status effect modifiers to accuracy
     if (this.hasStatusEffect(actor, 'enraged')) {
       hitChance -= 20;
+    }
+    if (this.hasStatusEffect(actor, 'exhausted')) {
+      hitChance -= 15;
     }
     if (this.hasStatusEffect(target, 'netted')) {
       hitChance += 25;
@@ -338,12 +357,22 @@ export class CombatEngine {
       damage *= special.damageMultiplier / actionData.damageMultiplier;
     }
     
+    // Apply equipment damage bonus
+    if (actor.equipmentBonuses.damageBonus) {
+      damage *= (1 + actor.equipmentBonuses.damageBonus / 100);
+    }
+    
     // Apply morale modifier
     damage *= (actor.morale / 70);
     
     // Apply enraged modifier
     if (this.hasStatusEffect(actor, 'enraged')) {
       damage *= 1.25;
+    }
+    
+    // Apply exhausted modifier (-20% damage)
+    if (this.hasStatusEffect(actor, 'exhausted')) {
+      damage *= 0.8;
     }
     
     // Check for critical hit
@@ -358,6 +387,11 @@ export class CombatEngine {
     if (this.hasStatusEffect(target, 'defended')) {
       damage *= 0.5;
       entry.blocked = true;
+    }
+    
+    // Apply target equipment defense bonus
+    if (target.equipmentBonuses.defenseBonus) {
+      damage *= (1 - target.equipmentBonuses.defenseBonus / 100);
     }
     
     // Round damage
@@ -465,39 +499,99 @@ export class CombatEngine {
     });
   }
   
-  // AI action selection
+  // AI action selection with class-specific behavior
   private selectAIAction(ai: CombatantState): ActionType {
     const player = this.state.player;
     
-    // If stunned, can't act
     if (this.hasStatusEffect(ai, 'stunned')) {
       return 'rest';
     }
     
-    // Low stamina - rest
     if (ai.currentStamina < 20) {
       return 'rest';
     }
     
-    // Low HP - be defensive
+    // Low HP — defensive behavior (all classes)
     if (ai.currentHP < ai.maxHP * 0.3) {
       if (Math.random() < 0.4) return 'defend';
       if (Math.random() < 0.3) return 'dodge';
     }
-    
-    // Player defending - use heavy attack
-    if (this.hasStatusEffect(player, 'defended')) {
-      if (ai.currentStamina >= 20 && Math.random() < 0.6) {
-        return 'heavy_attack';
-      }
+
+    // Class-specific AI strategies
+    switch (ai.class) {
+      case 'retiarius':
+        // Net-first: prioritize special (Net Throw) to cripple, then attack the netted target
+        if (this.canPerformAction(ai, 'special').canPerform && !this.hasStatusEffect(player, 'netted') && Math.random() < 0.6) {
+          return 'special';
+        }
+        if (this.hasStatusEffect(player, 'netted') && Math.random() < 0.7) {
+          return ai.currentStamina >= 20 ? 'heavy_attack' : 'attack';
+        }
+        if (Math.random() < 0.3) return 'dodge';
+        return Math.random() < 0.6 ? 'attack' : 'dodge';
+
+      case 'secutor':
+        // Rush: aggressive, close distance, overwhelm quickly before stamina runs out
+        if (this.canPerformAction(ai, 'special').canPerform && Math.random() < 0.4) {
+          return 'special';
+        }
+        if (ai.currentStamina >= 20 && Math.random() < 0.5) return 'heavy_attack';
+        return Math.random() < 0.7 ? 'attack' : 'heavy_attack';
+
+      case 'murmillo':
+      case 'samnite':
+        // Defensive tank: block-and-counter, use shield bash to stun then punish
+        if (this.hasStatusEffect(player, 'defended') && ai.currentStamina >= 20) {
+          return 'heavy_attack';
+        }
+        if (this.canPerformAction(ai, 'special').canPerform && Math.random() < 0.35) {
+          return 'special';
+        }
+        if (Math.random() < 0.3) return 'defend';
+        return Math.random() < 0.6 ? 'attack' : 'heavy_attack';
+
+      case 'thraex':
+      case 'hoplomachus':
+        // Balanced: mix attacks with specials, use bleed to wear down
+        if (this.canPerformAction(ai, 'special').canPerform && Math.random() < 0.4) {
+          return 'special';
+        }
+        if (this.hasStatusEffect(player, 'bleeding') && Math.random() < 0.3) {
+          return 'defend';
+        }
+        if (Math.random() < 0.5) return 'attack';
+        if (Math.random() < 0.5) return 'heavy_attack';
+        return 'defend';
+
+      case 'dimachaerus':
+        // Aggressive dual-wielder: relentless attacks, taunt for enrage, then punish
+        if (this.canPerformAction(ai, 'special').canPerform && Math.random() < 0.45) {
+          return 'special';
+        }
+        if (!this.hasStatusEffect(player, 'enraged') && Math.random() < 0.2) {
+          return 'taunt';
+        }
+        return ai.currentStamina >= 20 && Math.random() < 0.4 ? 'heavy_attack' : 'attack';
+
+      case 'velitus':
+        // Kiting: keep distance, use javelin to slow, dodge frequently
+        if (this.canPerformAction(ai, 'special').canPerform && !this.hasStatusEffect(player, 'slowed') && Math.random() < 0.5) {
+          return 'special';
+        }
+        if (Math.random() < 0.35) return 'dodge';
+        return Math.random() < 0.6 ? 'attack' : 'taunt';
+
+      default:
+        break;
     }
     
-    // Special ability available and good opportunity
+    // Fallback generic behavior
+    if (this.hasStatusEffect(player, 'defended') && ai.currentStamina >= 20 && Math.random() < 0.6) {
+      return 'heavy_attack';
+    }
     if (this.canPerformAction(ai, 'special').canPerform && Math.random() < 0.3) {
       return 'special';
     }
-    
-    // Default weighted random
     const roll = Math.random();
     if (roll < 0.5) return 'attack';
     if (roll < 0.7) return 'heavy_attack';
@@ -537,13 +631,13 @@ export class CombatEngine {
       }
     }
     
-    // First blood - any significant damage
+    // First blood - first to take any damage loses
     if (rules === 'first_blood') {
-      if (player.currentHP < player.maxHP * 0.8) {
+      if (player.currentHP < player.maxHP) {
         this.state.winner = opponent.name;
         return true;
       }
-      if (opponent.currentHP < opponent.maxHP * 0.8) {
+      if (opponent.currentHP < opponent.maxHP) {
         this.state.winner = player.name;
         return true;
       }

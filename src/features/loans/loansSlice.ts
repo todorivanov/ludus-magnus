@@ -136,6 +136,100 @@ const loansSlice = createSlice({
       }
     },
     
+    // Pay off a loan early (remaining balance with discount)
+    payOffLoan: (
+      state,
+      action: PayloadAction<{
+        loanId: string;
+        payoffAmount: number;
+        currentMonth: number;
+        currentYear: number;
+      }>
+    ) => {
+      const { loanId, payoffAmount, currentMonth, currentYear } = action.payload;
+      const loan = state.activeLoans.find(l => l.id === loanId);
+      
+      if (!loan || !loan.isActive) return;
+      
+      loan.isActive = false;
+      state.totalDebtOwed = Math.max(0, state.totalDebtOwed - (loan.monthlyPayment * (loan.durationMonths - loan.monthsPaid)));
+      
+      state.loanHistory.push({
+        loanId,
+        action: 'completed',
+        amount: payoffAmount,
+        month: currentMonth,
+        year: currentYear,
+        description: `Loan paid off early for ${payoffAmount} gold (saved ${loan.monthlyPayment * (loan.durationMonths - loan.monthsPaid) - payoffAmount}g in interest)`
+      });
+    },
+    
+    // Refinance a loan (replace with new terms)
+    refinanceLoan: (
+      state,
+      action: PayloadAction<{
+        loanId: string;
+        newType: LoanTerm;
+        currentMonth: number;
+        currentYear: number;
+      }>
+    ) => {
+      const { loanId, newType, currentMonth, currentYear } = action.payload;
+      const loan = state.activeLoans.find(l => l.id === loanId);
+      
+      if (!loan || !loan.isActive) return;
+      
+      const remainingPayments = loan.durationMonths - loan.monthsPaid;
+      const remainingBalance = loan.monthlyPayment * remainingPayments;
+      
+      // Refinance: extend the term with the new type's interest rate, on the remaining balance
+      const REFINANCE_RATES: Record<LoanTerm, { duration: number; rate: number }> = {
+        short: { duration: 6, rate: 12 },
+        medium: { duration: 12, rate: 20 },
+        long: { duration: 24, rate: 35 },
+      };
+      const newTerms = REFINANCE_RATES[newType];
+      const newMonthlyPayment = calculateMonthlyPayment(remainingBalance, newTerms.rate, newTerms.duration);
+      
+      loan.isActive = false;
+      state.totalDebtOwed -= loan.monthlyPayment * remainingPayments;
+      
+      state.loanHistory.push({
+        loanId: loan.id,
+        action: 'completed',
+        month: currentMonth,
+        year: currentYear,
+        description: `Loan refinanced into new ${newType}-term loan`
+      });
+      
+      const refinancedLoan: Loan = {
+        id: `loan-${state.nextLoanId}`,
+        type: newType,
+        principal: remainingBalance,
+        interestRate: newTerms.rate,
+        durationMonths: newTerms.duration,
+        monthlyPayment: newMonthlyPayment,
+        monthsTaken: currentMonth,
+        yearTaken: currentYear,
+        monthsPaid: 0,
+        missedPayments: 0,
+        isActive: true,
+      };
+      
+      state.activeLoans.push(refinancedLoan);
+      state.nextLoanId += 1;
+      state.totalDebtOwed += calculateMonthlyPayment(remainingBalance, newTerms.rate, newTerms.duration) * newTerms.duration;
+      
+      state.loanHistory.push({
+        loanId: refinancedLoan.id,
+        action: 'taken',
+        amount: remainingBalance,
+        month: currentMonth,
+        year: currentYear,
+        description: `Refinanced: ${remainingBalance}g over ${newTerms.duration} months at ${newTerms.rate}%`
+      });
+    },
+    
     // Record a missed payment
     missPayment: (
       state,
@@ -168,6 +262,8 @@ export const {
   takeLoan,
   makePayment,
   missPayment,
+  payOffLoan,
+  refinanceLoan,
 } = loansSlice.actions;
 
 // Selectors

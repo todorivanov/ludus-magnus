@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import audioManager from '@/audio/AudioManager';
+import type { SoundEffect } from '@/audio/sounds';
 
 export interface ToastData {
   id: string;
@@ -115,6 +117,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToast = useCallback((toast: Omit<ToastData, 'id'>) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setToasts((prev) => [...prev, { ...toast, id }]);
+
+    const toastSoundMap: Record<ToastData['type'], SoundEffect> = {
+      success: 'notification',
+      error: 'error',
+      warning: 'warning',
+      info: 'notification',
+      gold: 'goldGain',
+    };
+    audioManager.playSFX(toastSoundMap[toast.type]);
   }, []);
 
   const removeToast = useCallback((id: string) => {
